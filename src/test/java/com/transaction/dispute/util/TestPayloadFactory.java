@@ -4,6 +4,7 @@ import com.transaction.dispute.common.AppConstants;
 import com.transaction.dispute.model.dto.AuthResponseDto;
 import com.transaction.dispute.model.dto.LoginRequestDto;
 import com.transaction.dispute.model.dto.RegisterRequestDto;
+import com.transaction.dispute.model.dto.TransactionResponseDto;
 import com.transaction.dispute.model.entity.AccountEntity;
 import com.transaction.dispute.model.entity.DisputeEntity;
 import com.transaction.dispute.model.entity.TransactionEntity;
@@ -69,6 +70,32 @@ public final class TestPayloadFactory {
                 .build();
     }
 
+    public static TransactionEntity createTransactionEntity(AccountEntity account, String reference) {
+        return TransactionEntity.builder()
+                .account(account)
+                .reference(reference)
+                .merchant("FITNESS_CLUB_ZA")
+                .amount(new BigDecimal("450.00"))
+                .currency("ZAR")
+                .mandateType(MandateType.STANDARD_EFT)
+                .status(TransactionStatus.COMPLETED)
+                .transactionDate(OffsetDateTime.now())
+                .build();
+    }
+
+    public static TransactionResponseDto createTransactionResponseDto() {
+        return new TransactionResponseDto(
+                5000102L,
+                "TXN-90812",
+                "FITNESS_CLUB_ZA",
+                new BigDecimal("450.00"),
+                "ZAR",
+                MandateType.STANDARD_EFT,
+                TransactionStatus.COMPLETED,
+                OffsetDateTime.now()
+        );
+    }
+
     public static DisputeEntity createDisputeEntity(UserEntity user, TransactionEntity transaction) {
         return DisputeEntity.builder()
                 .disputeId(5000401L)
@@ -83,3 +110,4 @@ public final class TestPayloadFactory {
                 .build();
     }
 }
+

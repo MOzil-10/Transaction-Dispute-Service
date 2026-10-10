@@ -19,7 +19,7 @@ public class JwtService {
     @Value("${application.security.jwt.secret-key:404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971}")
     private String secretKey;
 
-    @Value("${application.security.jwt.expiration:86400000}") // 24 hours
+    @Value("${application.security.jwt.expiration:86400000}")
     private long jwtExpiration;
 
     private SecretKey getSigningKey() {
@@ -42,6 +42,10 @@ public class JwtService {
         return extractAllClaims(token).getSubject();
     }
 
+    public Long extractCustomerId(String token) {
+        return extractAllClaims(token).get("customerId", Long.class);
+    }
+
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String email = extractEmail(token);
         boolean valid = email.equals(userDetails.getUsername()) && !isTokenExpired(token);
@@ -61,3 +65,4 @@ public class JwtService {
                 .getPayload();
     }
 }
+
