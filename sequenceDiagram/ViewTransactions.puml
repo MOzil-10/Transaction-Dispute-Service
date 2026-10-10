@@ -1,0 +1,39 @@
+@startuml
+autonumber
+skinparam Style strictuml
+skinparam SequenceMessageAlignment center
+skinparam boxPadding 10
+
+box "User Layer" #E6F0FA
+actor "Customer\n(Rita)" as Customer
+end box
+
+box "Frontend Layer" #E6F9E6
+participant "Angular Frontend\n(Web App)" as Frontend
+end box
+
+box "API Gateway & Auth Layer" #FFF9E6
+participant "Spring Boot API\n(REST Controller)" as Controller
+participant "Spring Security\n(JWT / Auth)" as Security
+end box
+
+box "Database Layer" #F2E6FF
+database "PostgreSQL\n(Database)" as DB
+end box
+
+Customer -> Frontend: View transactions
+Frontend -> Controller: GET /api/v1/transactions?page=0&size=10
+
+Controller -> Security: Validate JWT Token
+alt #LightPink Token Invalid / Expired
+    Security --> Controller: Token invalid
+    Controller --> Frontend: <font color=red><b>401 Unauthorized</b> (JWT expired/invalid)</font>
+    Frontend --> Customer: Redirect to login screen
+else #LightGreen Token Valid
+    Security --> Controller: Authenticated customer
+    Controller -> DB: Fetch customer transactions
+    DB --> Controller: Transaction list
+    Controller --> Frontend: <font color=green><b>200 OK</b> (Paginated transactions)</font>
+    Frontend --> Customer: Display transactions on dashboard
+end
+@enduml

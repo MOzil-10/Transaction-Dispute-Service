@@ -1,0 +1,61 @@
+@startuml
+autonumber
+skinparam Style strictuml
+skinparam SequenceMessageAlignment center
+skinparam boxPadding 10
+
+box "User Layer" #E6F0FA
+actor "Customer\n(Rita)" as Customer
+end box
+
+box "Frontend Layer" #E6F9E6
+participant "Angular Frontend\n(Web App)" as Frontend
+end box
+
+box "API Gateway & Auth Layer" #FFF9E6
+participant "AuthController\n(REST API)" as Controller
+participant "AuthService\n(Transactional Service)" as Service
+participant "PasswordEncoder\n(BCrypt)" as Encoder
+participant "JwtService\n(JWT Utility)" as JWT
+end box
+
+box "Database Layer" #F2E6FF
+database "PostgreSQL\n(RDS Database)" as DB
+end box
+
+Customer -> Frontend: Submit Registration Form (name, email, password)
+Frontend -> Controller: POST /api/v1/auth/register (RegisterRequestDto)
+
+Controller -> Service: register(RegisterRequestDto)
+
+Service -> DB: Check if email exists (existsByEmail)
+DB --> Service: Boolean result
+
+alt #LightPink Email Already Registered
+    Service --> Controller: Throw BadRequestException
+    Controller --> Frontend: <font color=red><b>400 Bad Request</b> (Email address is already registered)</font>
+    Frontend --> Customer: Display registration error message
+else #LightGreen New Customer Registration
+    Service -> DB: Get next customer_seq ID (starts at 5000000)
+    DB --> Service: customerId (Long)
+
+    Service -> Encoder: encode(rawPassword)
+    Encoder --> Service: passwordHash
+
+    Service -> DB: Save UserEntity (customers table)
+    DB --> Service: Saved UserEntity
+
+    Service -> DB: Get next account_seq ID (starts at 5000000)
+    DB --> Service: accountId (Long)
+
+    Service -> DB: Save AccountEntity (CHECKING, ZAR 10,000.00 seed balance)
+    DB --> Service: Saved AccountEntity
+
+    Service -> JWT: generateToken(UserDetails, customerId)
+    JWT --> Service: Bearer JWT Access Token
+
+    Service --> Controller: AuthResponseDto (token, customerId, email)
+    Controller --> Frontend: <font color=green><b>201 Created</b> (AuthResponseDto)</font>
+    Frontend --> Customer: Registration successful (Redirect to Account Dashboard)
+end
+@enduml

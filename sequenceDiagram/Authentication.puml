@@ -1,0 +1,48 @@
+@startuml
+autonumber
+skinparam Style strictuml
+skinparam SequenceMessageAlignment center
+skinparam boxPadding 10
+
+box "User Layer" #E6F0FA
+actor "Customer\n(Rita)" as Customer
+end box
+
+box "Frontend Layer" #E6F9E6
+participant "Angular Frontend\n(Web App)" as Frontend
+end box
+
+box "API Gateway & Auth Layer" #FFF9E6
+participant "AuthController\n(REST API)" as Controller
+participant "AuthService\n(Service Layer)" as Service
+participant "AuthenticationManager\n(Spring Security)" as AuthManager
+participant "JwtService\n(JWT Utility)" as JWT
+end box
+
+box "Database Layer" #F2E6FF
+database "PostgreSQL\n(RDS Database)" as DB
+end box
+
+Customer -> Frontend: Log in (email + password)
+Frontend -> Controller: POST /api/v1/auth/login (LoginRequestDto)
+
+Controller -> Service: login(LoginRequestDto)
+Service -> AuthManager: authenticate(UsernamePasswordAuthenticationToken)
+
+AuthManager -> DB: findByEmail(email)
+DB --> AuthManager: UserEntity (with passwordHash)
+
+alt #LightPink Invalid Credentials / Bad Password
+    AuthManager --> Service: Throws BadCredentialsException
+    Service --> Controller: Throws UnauthorizedException
+    Controller --> Frontend: <font color=red><b>401 Unauthorized</b> (Invalid email or password)</font>
+    Frontend --> Customer: Show login error message
+else #LightGreen Credentials Valid
+    AuthManager --> Service: Authentication successful
+    Service -> JWT: generateToken(UserDetails, customerId)
+    JWT --> Service: Bearer JWT Access Token
+    Service --> Controller: AuthResponseDto (token, customerId, email)
+    Controller --> Frontend: <font color=green><b>200 OK</b> (AuthResponseDto)</font>
+    Frontend --> Customer: Login successful (Redirect to Dashboard)
+end
+@enduml

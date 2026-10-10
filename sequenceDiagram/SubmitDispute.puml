@@ -1,0 +1,54 @@
+@startuml
+autonumber
+skinparam Style strictuml
+skinparam SequenceMessageAlignment center
+skinparam boxPadding 10
+
+box "User Layer" #E6F0FA
+actor "Customer\n(Rita)" as Customer
+end box
+
+box "Frontend Layer" #E6F9E6
+participant "Angular Frontend\n(Web App)" as Frontend
+end box
+
+box "API Gateway & Auth Layer" #FFF9E6
+participant "Spring Boot API\n(REST Controller)" as Controller
+participant "Spring Security\n(JWT / Auth)" as Security
+end box
+
+box "Decision Engine Services" #FFE6E6
+participant "Risk Score Engine\n(Java Service)" as RiskEngine
+participant "Decision Rules Matrix\n(Java Service)" as DecisionMatrix
+end box
+
+box "Database Layer" #F2E6FF
+database "PostgreSQL\n(Database)" as DB
+end box
+
+Customer -> Frontend: Select transaction & provide reason
+Frontend -> Controller: POST /api/v1/disputes
+
+Controller -> Security: Validate JWT & get customer ID
+Security --> Controller: Authenticated customer
+
+Controller -> DB: Validate transaction ownership & eligibility
+DB --> Controller: Transaction details
+
+alt #LightPink Transaction Ineligible or Not Owned
+    Controller --> Frontend: <font color=red><b>400 Bad Request / 403 Forbidden</b> (Ineligible transaction)</font>
+    Frontend --> Customer: Show error message
+else #LightGreen Transaction Valid & Eligible
+    Controller -> RiskEngine: Calculate risk score
+    RiskEngine --> Controller: Risk score (e.g., 55/100)
+
+    Controller -> DecisionMatrix: Evaluate decision rules
+    DecisionMatrix --> Controller: Decision (MANUAL_REVIEW or AUTO_APPROVE)
+
+    Controller -> DB: Save dispute (risk score, decision, reason)
+    DB --> Controller: Dispute saved (id + reference)
+
+    Controller --> Frontend: <font color=green><b>201 Created</b> (Dispute reference + status)</font>
+    Frontend --> Customer: Show confirmation (Dispute Reference)
+end
+@enduml

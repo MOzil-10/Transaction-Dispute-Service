@@ -1,0 +1,39 @@
+@startuml
+autonumber
+skinparam Style strictuml
+skinparam SequenceMessageAlignment center
+skinparam boxPadding 10
+
+box "User Layer" #E6F0FA
+actor "Customer\n(Rita)" as Customer
+end box
+
+box "Frontend Layer" #E6F9E6
+participant "Angular Frontend\n(Web App)" as Frontend
+end box
+
+box "API Gateway & Auth Layer" #FFF9E6
+participant "Spring Boot API\n(REST Controller)" as Controller
+participant "Spring Security\n(JWT / Auth)" as Security
+end box
+
+box "Database Layer" #F2E6FF
+database "PostgreSQL\n(Database)" as DB
+end box
+
+Customer -> Frontend: View dispute history
+Frontend -> Controller: GET /api/v1/disputes?page=0&size=10
+
+Controller -> Security: Validate JWT Token
+alt #LightPink Token Expired or Missing
+    Security --> Controller: Unauthorized
+    Controller --> Frontend: <font color=red><b>401 Unauthorized</b> (Token invalid)</font>
+    Frontend --> Customer: Prompt login
+else #LightGreen Token Verified
+    Security --> Controller: Authenticated customer
+    Controller -> DB: Fetch customer disputes
+    DB --> Controller: Dispute history list
+    Controller --> Frontend: <font color=green><b>200 OK</b> (Paginated disputes)</font>
+    Frontend --> Customer: Display dispute history page
+end
+@enduml
