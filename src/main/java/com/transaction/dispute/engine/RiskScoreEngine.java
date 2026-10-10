@@ -44,8 +44,7 @@ public class RiskScoreEngine {
         };
 
         int capped = Math.min(score, 100);
-        log.debug("Risk score calculated: {} (mandate={}, reason={})",
-                capped, transaction.getMandateType(), reason);
+        log.debug("Risk score calculated: {} (mandate={}, reason={})", capped, transaction.getMandateType(), reason);
         return capped;
     }
 }

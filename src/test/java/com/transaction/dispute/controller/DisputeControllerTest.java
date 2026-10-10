@@ -1,6 +1,7 @@
 package com.transaction.dispute.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.transaction.dispute.config.TestSqsConfig;
 import com.transaction.dispute.model.dto.AuthResponseDto;
 import com.transaction.dispute.model.dto.DisputeRequestDto;
 import com.transaction.dispute.model.dto.DisputeResponseDto;
@@ -36,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@org.springframework.context.annotation.Import(TestSqsConfig.class)
 class DisputeControllerTest {
 
     @Autowired private MockMvc mockMvc;

@@ -38,29 +38,17 @@ public class DisputeController {
     private final DisputeService disputeService;
     private final JwtService jwtService;
 
-    @Operation(
-            summary = "Submit a transaction dispute",
-            description = "Validates transaction ownership, calculates a risk score, applies the decision matrix, persists the dispute, and returns the routing outcome.",
-            security = @SecurityRequirement(name = "bearerAuth")
-    )
+    @Operation(summary = "Submit a transaction dispute", description = "Validates transaction ownership, calculates a risk score, applies the decision matrix, persists the dispute, and returns the routing outcome.", security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Dispute submitted and decision evaluated",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = DisputeResponseDto.class))),
-            @ApiResponse(responseCode = "400", description = "Duplicate dispute or validation error",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized — invalid or missing JWT",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
-            @ApiResponse(responseCode = "403", description = "Transaction does not belong to authenticated customer",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
-            @ApiResponse(responseCode = "404", description = "Transaction or customer not found",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
-            @ApiResponse(responseCode = "500", description = "Internal server error",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)))
+            @ApiResponse(responseCode = "201", description = "Dispute submitted and decision evaluated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DisputeResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Duplicate dispute or validation error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized — invalid or missing JWT", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
+            @ApiResponse(responseCode = "403", description = "Transaction does not belong to authenticated customer", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "Transaction or customer not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)))
     })
     @PostMapping
-    public ResponseEntity<DisputeResponseDto> submitDispute(
-            @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String authorizationHeader,
-            @Valid @RequestBody DisputeRequestDto request
+    public ResponseEntity<DisputeResponseDto> submitDispute(@RequestHeader(AppConstants.AUTHORIZATION_HEADER) String authorizationHeader, @Valid @RequestBody DisputeRequestDto request
     ) {
         log.info("Received dispute submission request — transactionId={}", request.transactionId());
 
@@ -68,31 +56,20 @@ public class DisputeController {
         Long customerId = jwtService.extractCustomerId(token);
 
         DisputeResponseDto response = disputeService.submitDispute(customerId, request);
-        log.info("Dispute submission complete — disputeReference={}, status={}",
-                response.disputeReference(), response.status());
+        log.info("Dispute submission complete — disputeReference={}, status={}", response.disputeReference(), response.status());
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(
-            summary = "Get dispute history",
-            description = "Returns a paginated list of all disputes submitted by the authenticated customer, sorted by submission date descending.",
-            security = @SecurityRequirement(name = "bearerAuth")
-    )
+    @Operation(summary = "Get dispute history", description = "Returns a paginated list of all disputes submitted by the authenticated customer, sorted by submission date descending.", security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Dispute history retrieved successfully",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized — invalid or missing JWT",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
-            @ApiResponse(responseCode = "404", description = "Customer not found",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
-            @ApiResponse(responseCode = "500", description = "Internal server error",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)))
+            @ApiResponse(responseCode = "200", description = "Dispute history retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized — invalid or missing JWT", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "Customer not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)))
     })
     @GetMapping
-    public ResponseEntity<Page<DisputeResponseDto>> getDisputeHistory(
-            @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String authorizationHeader,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+    public ResponseEntity<Page<DisputeResponseDto>> getDisputeHistory(@RequestHeader(AppConstants.AUTHORIZATION_HEADER) String authorizationHeader, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
     ) {
         log.info("Received request to view dispute history");
 

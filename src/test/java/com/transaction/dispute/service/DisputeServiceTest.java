@@ -1,6 +1,7 @@
 package com.transaction.dispute.service;
 
 import com.transaction.dispute.common.AppConstants;
+import com.transaction.dispute.config.TestSqsConfig;
 import com.transaction.dispute.exception.BadRequestException;
 import com.transaction.dispute.exception.ResourceNotFoundException;
 import com.transaction.dispute.exception.UnauthorizedException;
@@ -8,6 +9,7 @@ import com.transaction.dispute.model.dto.DisputeRequestDto;
 import com.transaction.dispute.model.dto.DisputeResponseDto;
 import com.transaction.dispute.model.dto.RegisterRequestDto;
 import com.transaction.dispute.model.entity.AccountEntity;
+import com.transaction.dispute.model.entity.DisputeEntity;
 import com.transaction.dispute.model.entity.TransactionEntity;
 import com.transaction.dispute.model.enums.DecisionRoute;
 import com.transaction.dispute.model.enums.DisputeReason;
@@ -35,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@org.springframework.context.annotation.Import(TestSqsConfig.class)
 class DisputeServiceTest {
 
     @Autowired private DisputeService disputeService;
@@ -149,5 +152,21 @@ class DisputeServiceTest {
         assertThat(history).isNotNull();
         assertThat(history.getTotalElements()).isZero();
     }
-}
 
+    // Verifies sqsMessageId is persisted on the DisputeEntity after successful SQS publish
+    @Test
+    @DisplayName("Should persist sqsMessageId on dispute after SQS publish")
+    void submitDispute_ShouldPersistSqsMessageId_AfterSuccessfulPublish() {
+        DisputeRequestDto request = TestPayloadFactory.createDisputeRequest(savedTransaction.getTransactionId());
+
+        DisputeResponseDto response = disputeService.submitDispute(customerId, request);
+
+        DisputeEntity persisted = disputeRepository.findAll().stream()
+                .filter(d -> d.getDisputeReference().equals(response.disputeReference()))
+                .findFirst()
+                .orElseThrow();
+
+        // TestSqsConfig mock returns "test-sqs-message-id"
+        assertThat(persisted.getSqsMessageId()).isEqualTo("test-sqs-message-id");
+    }
+}

@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@org.springframework.context.annotation.Import(com.transaction.dispute.config.TestSqsConfig.class)
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")

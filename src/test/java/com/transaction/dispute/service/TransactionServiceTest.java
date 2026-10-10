@@ -25,6 +25,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@org.springframework.context.annotation.Import(com.transaction.dispute.config.TestSqsConfig.class)
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional

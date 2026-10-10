@@ -34,26 +34,15 @@ public class TransactionController {
     private final TransactionService transactionService;
     private final JwtService jwtService;
 
-    @Operation(
-            summary = "Get customer transactions",
-            description = "Returns a paginated list of transactions linked to the authenticated customer account, sorted by transaction date descending.",
-            security = @SecurityRequirement(name = "bearerAuth")
-    )
+    @Operation(summary = "Get customer transactions", description = "Returns a paginated list of transactions linked to the authenticated customer account, sorted by transaction date descending.", security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Transactions retrieved successfully",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Bearer JWT token missing or invalid",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
-            @ApiResponse(responseCode = "404", description = "No account found for authenticated customer",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
-            @ApiResponse(responseCode = "500", description = "Internal server error",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)))
+            @ApiResponse(responseCode = "200", description = "Transactions retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Bearer JWT token missing or invalid", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "No account found for authenticated customer", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)))
     })
     @GetMapping
-    public ResponseEntity<Page<TransactionResponseDto>> getTransactions(
-            @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String authorizationHeader,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+    public ResponseEntity<Page<TransactionResponseDto>> getTransactions(@RequestHeader(AppConstants.AUTHORIZATION_HEADER) String authorizationHeader, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
     ) {
         log.info("Received request to view transactions");
 
@@ -63,8 +52,8 @@ public class TransactionController {
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "transactionDate"));
         Page<TransactionResponseDto> result = transactionService.getTransactionPage(customerId, pageable);
 
-        log.info("Returning transaction page — customerId={}, page={}, totalElements={}",
-                customerId, page, result.getTotalElements());
+        log.info("Returning transaction page — customerId={}, page={}, totalElements={}", customerId, page, result.getTotalElements());
+
         return ResponseEntity.ok(result);
     }
 }

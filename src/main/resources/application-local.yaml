@@ -19,9 +19,23 @@ spring:
   flyway:
     enabled: true
 
+aws:
+  region: ${AWS_REGION:af-south-1}
+  access-key-id: ${AWS_ACCESS_KEY_ID:}
+  secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+  sqs:
+    dispute-queue-url: ${AWS_SQS_DISPUTE_QUEUE_URL}
+
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET_KEY}
+      expiration: ${JWT_EXPIRATION:86400000}
+
 logging:
   level:
     root: INFO
     com.transaction.dispute: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
+

@@ -37,6 +37,7 @@ public class DisputeService {
     private final DisputeMapper disputeMapper;
     private final RiskScoreEngine riskScoreEngine;
     private final DecisionMatrix decisionMatrix;
+    private final SqsPublisherService sqsPublisherService;
 
     @Transactional
     public DisputeResponseDto submitDispute(Long customerId, DisputeRequestDto request) {
@@ -94,6 +95,15 @@ public class DisputeService {
 
         DisputeEntity saved = disputeRepository.save(dispute);
         log.info("Dispute saved — disputeReference={}, status={}", saved.getDisputeReference(), saved.getStatus());
+
+        // Publish event to SQS — non-fatal, sqsMessageId stored for audit
+        String sqsMessageId = sqsPublisherService.publishDisputeEvent(saved);
+        if (sqsMessageId != null) {
+            saved.setSqsMessageId(sqsMessageId);
+            disputeRepository.save(saved);
+            log.debug("SQS message ID persisted — disputeReference={}, sqsMessageId={}",
+                    saved.getDisputeReference(), sqsMessageId);
+        }
 
         // Resolve user-facing message from decision
         String message = decisionRoute == DecisionRoute.AUTO_APPROVE
