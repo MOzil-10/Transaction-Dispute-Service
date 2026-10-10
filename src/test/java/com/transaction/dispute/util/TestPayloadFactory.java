@@ -2,6 +2,8 @@ package com.transaction.dispute.util;
 
 import com.transaction.dispute.common.AppConstants;
 import com.transaction.dispute.model.dto.AuthResponseDto;
+import com.transaction.dispute.model.dto.DisputeRequestDto;
+import com.transaction.dispute.model.dto.DisputeResponseDto;
 import com.transaction.dispute.model.dto.LoginRequestDto;
 import com.transaction.dispute.model.dto.RegisterRequestDto;
 import com.transaction.dispute.model.dto.TransactionResponseDto;
@@ -85,13 +87,26 @@ public final class TestPayloadFactory {
 
     public static TransactionResponseDto createTransactionResponseDto() {
         return new TransactionResponseDto(
-                5000102L,
-                "TXN-90812",
-                "FITNESS_CLUB_ZA",
+                5000102L, "TXN-90812", "FITNESS_CLUB_ZA",
+                new BigDecimal("450.00"), "ZAR",
+                MandateType.STANDARD_EFT, TransactionStatus.COMPLETED,
+                OffsetDateTime.now()
+        );
+    }
+
+    public static DisputeRequestDto createDisputeRequest(Long transactionId) {
+        return new DisputeRequestDto(transactionId, DisputeReason.UNAUTHORISED_MANDATE,
+                "Unauthorised debit order processed after contract cancellation.");
+    }
+
+    public static DisputeResponseDto createDisputeResponseDto() {
+        return new DisputeResponseDto(
+                5000401L, "DSP-77491", 5000102L,
                 new BigDecimal("450.00"),
-                "ZAR",
-                MandateType.STANDARD_EFT,
-                TransactionStatus.COMPLETED,
+                DisputeReason.UNAUTHORISED_MANDATE, 70,
+                DecisionRoute.MANUAL_INVESTIGATION,
+                DisputeStatus.QUEUED_FOR_AGENT,
+                AppConstants.MSG_DISPUTE_QUEUED_AGENT,
                 OffsetDateTime.now()
         );
     }
