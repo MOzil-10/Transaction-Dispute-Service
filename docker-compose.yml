@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dispute-postgres
+    environment:
+      POSTGRES_DB: dispute_db
+      POSTGRES_USER: dispute
+      POSTGRES_PASSWORD: dispute_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dispute -d dispute_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:3
+    container_name: dispute-localstack
+    environment:
+      SERVICES: sqs
+      DEFAULT_REGION: af-south-1
+    ports:
+      - "4566:4566"
+    volumes:
+      - "./localstack/init-sqs.sh:/etc/localstack/init/ready.d/init-sqs.sh"
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal sqs list-queues || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dispute-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    ports:
+      - "8087:8087"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_URL: jdbc:postgresql://postgres:5432/dispute_db
+      DB_USERNAME: dispute
+      DB_PASSWORD: dispute_pass
+      JWT_SECRET_KEY: 404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971
+      JWT_EXPIRATION: "86400000"
+      AWS_REGION: af-south-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_SQS_ENDPOINT_OVERRIDE: http://localstack:4566
+      AWS_SQS_DISPUTE_QUEUE_URL: http://localstack:4566/000000000000/dispute-events.fifo
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8087/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  postgres-data:

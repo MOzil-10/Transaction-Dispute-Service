@@ -71,17 +71,39 @@ The API will be available at `http://localhost:8087`.
 
 ---
 
-## Running with Docker
+## Running with Docker Compose (recommended)
 
-### Build the image
+The quickest way to run the full stack. This starts three containers:
+
+- **app** — the Spring Boot API (port 8087)
+- **postgres** — PostgreSQL 16 database
+- **localstack** — emulated AWS SQS (a `dispute-events.fifo` queue is created automatically on startup)
+
+No AWS account, local PostgreSQL, or extra configuration is required.
+
+```bash
+# Build and start the whole stack
+docker compose up --build
+
+# Stop and remove containers (keeps the database volume)
+docker compose down
+
+# Stop and remove containers AND the database volume
+docker compose down -v
+```
+
+Once started, the API is available at `http://localhost:8087` and Swagger UI at
+`http://localhost:8087/swagger-ui/index.html`.
+
+---
+
+## Running with Docker (single container)
+
+If you want to run only the app container against your own PostgreSQL and SQS:
 
 ```bash
 docker build -t dispute-portal:latest .
-```
 
-### Run the container
-
-```bash
 docker run -p 8087:8087 \
   -e DB_URL=jdbc:postgresql://host.docker.internal:5432/dispute_db \
   -e DB_USERNAME=postgres \
@@ -90,7 +112,7 @@ docker run -p 8087:8087 \
   -e AWS_REGION=af-south-1 \
   -e AWS_ACCESS_KEY_ID=your-access-key \
   -e AWS_SECRET_ACCESS_KEY=your-secret-key \
-  -e AWS_SQS_DISPUTE_QUEUE_URL=https://sqs.af-south-1.amazonaws.com/123456789/dispute-events \
+  -e AWS_SQS_DISPUTE_QUEUE_URL=https://sqs.af-south-1.amazonaws.com/123456789/dispute-events.fifo \
   dispute-portal:latest
 ```
 
