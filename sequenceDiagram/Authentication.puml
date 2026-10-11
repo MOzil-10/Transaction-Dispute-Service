@@ -12,11 +12,13 @@ box "Frontend Layer" #E6F9E6
 participant "Angular Frontend\n(Web App)" as Frontend
 end box
 
-box "API Gateway & Auth Layer" #FFF9E6
-participant "AuthController\n(REST API)" as Controller
-participant "AuthService\n(Service Layer)" as Service
+box "API & Service Layer" #FFF9E6
+participant "AuthController" as Controller
+participant "AuthService" as Service
 participant "AuthenticationManager\n(Spring Security)" as AuthManager
-participant "JwtService\n(JWT Utility)" as JWT
+participant "UserRepository" as UserRepo
+participant "UserDetailsService" as UDS
+participant "JwtService" as JWT
 end box
 
 box "Database Layer" #F2E6FF
@@ -24,25 +26,35 @@ database "PostgreSQL\n(RDS Database)" as DB
 end box
 
 Customer -> Frontend: Log in (email + password)
-Frontend -> Controller: POST /api/v1/auth/login (LoginRequestDto)
+Frontend -> Controller: POST /api/v1/auth/login\n(LoginRequestDto)
 
-Controller -> Service: login(LoginRequestDto)
-Service -> AuthManager: authenticate(UsernamePasswordAuthenticationToken)
+Controller -> Service: login(request)
+Service -> AuthManager: authenticate(\nUsernamePasswordAuthenticationToken)
+AuthManager -> UDS: loadUserByUsername(email)
+UDS -> DB: SELECT ... FROM customers WHERE email = ?
+DB --> UDS: UserEntity (passwordHash)
+UDS --> AuthManager: UserDetails
 
-AuthManager -> DB: findByEmail(email)
-DB --> AuthManager: UserEntity (with passwordHash)
-
-alt #LightPink Invalid Credentials / Bad Password
-    AuthManager --> Service: Throws BadCredentialsException
-    Service --> Controller: Throws UnauthorizedException
-    Controller --> Frontend: <font color=red><b>401 Unauthorized</b> (Invalid email or password)</font>
-    Frontend --> Customer: Show login error message
+alt #LightPink Invalid Credentials
+    AuthManager --> Service: throw BadCredentialsException
+    Service --> Controller: throw UnauthorizedException\n(MSG_INVALID_CREDENTIALS)
+    Controller --> Frontend: <font color=red><b>401 Unauthorized</b> (ErrorResponseDto)</font>
+    Frontend --> Customer: Show login error
 else #LightGreen Credentials Valid
     AuthManager --> Service: Authentication successful
-    Service -> JWT: generateToken(UserDetails, customerId)
-    JWT --> Service: Bearer JWT Access Token
-    Service --> Controller: AuthResponseDto (token, customerId, email)
+
+    Service -> UserRepo: findByEmail(request.email())
+    UserRepo -> DB: SELECT ... FROM customers WHERE email = ?
+    DB --> UserRepo: UserEntity
+    UserRepo --> Service: UserEntity
+
+    Service -> UDS: loadUserByUsername(user.getEmail())
+    UDS --> Service: UserDetails
+    Service -> JWT: generateToken(userDetails, customerId)
+    JWT --> Service: Bearer JWT (customerId claim)
+
+    Service --> Controller: AuthResponseDto\n(token, customerId, email)
     Controller --> Frontend: <font color=green><b>200 OK</b> (AuthResponseDto)</font>
-    Frontend --> Customer: Login successful (Redirect to Dashboard)
+    Frontend --> Customer: Login successful (redirect to dashboard)
 end
 @enduml

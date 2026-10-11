@@ -12,50 +12,54 @@ box "Frontend Layer" #E6F9E6
 participant "Angular Frontend\n(Web App)" as Frontend
 end box
 
-box "API Gateway & Auth Layer" #FFF9E6
-participant "AuthController\n(REST API)" as Controller
-participant "AuthService\n(Transactional Service)" as Service
+box "API & Service Layer" #FFF9E6
+participant "AuthController" as Controller
+participant "AuthService" as Service
+participant "UserRepository" as UserRepo
 participant "PasswordEncoder\n(BCrypt)" as Encoder
-participant "JwtService\n(JWT Utility)" as JWT
+participant "AccountRepository" as AccountRepo
+participant "UserDetailsService" as UDS
+participant "JwtService" as JWT
 end box
 
 box "Database Layer" #F2E6FF
 database "PostgreSQL\n(RDS Database)" as DB
 end box
 
-Customer -> Frontend: Submit Registration Form (name, email, password)
-Frontend -> Controller: POST /api/v1/auth/register (RegisterRequestDto)
+Customer -> Frontend: Submit registration form (firstName, lastName, email, password)
+Frontend -> Controller: POST /api/v1/auth/register\n(RegisterRequestDto)
 
-Controller -> Service: register(RegisterRequestDto)
-
-Service -> DB: Check if email exists (existsByEmail)
-DB --> Service: Boolean result
+Controller -> Service: register(request)
+Service -> UserRepo: existsByEmail(request.email())
+UserRepo -> DB: SELECT ... FROM customers WHERE email = ?
+DB --> UserRepo: boolean
+UserRepo --> Service: boolean
 
 alt #LightPink Email Already Registered
-    Service --> Controller: Throw BadRequestException
-    Controller --> Frontend: <font color=red><b>400 Bad Request</b> (Email address is already registered)</font>
-    Frontend --> Customer: Display registration error message
-else #LightGreen New Customer Registration
-    Service -> DB: Get next customer_seq ID (starts at 5000000)
-    DB --> Service: customerId (Long)
-
-    Service -> Encoder: encode(rawPassword)
+    Service --> Controller: throw BadRequestException\n(MSG_EMAIL_ALREADY_EXISTS)
+    Controller --> Frontend: <font color=red><b>400 Bad Request</b> (ErrorResponseDto)</font>
+    Frontend --> Customer: Display registration error
+else #LightGreen New Customer
+    Service -> Encoder: encode(request.password())
     Encoder --> Service: passwordHash
 
-    Service -> DB: Save UserEntity (customers table)
-    DB --> Service: Saved UserEntity
+    Service -> UserRepo: save(UserEntity)
+    UserRepo -> DB: INSERT INTO customers (customer_seq)
+    DB --> UserRepo: savedUser (customerId)
+    UserRepo --> Service: savedUser
 
-    Service -> DB: Get next account_seq ID (starts at 5000000)
-    DB --> Service: accountId (Long)
+    Service -> AccountRepo: save(AccountEntity)\n(CHECKING, ZAR 10,000.00 seed)
+    AccountRepo -> DB: INSERT INTO accounts (account_seq)
+    DB --> AccountRepo: savedAccount
+    AccountRepo --> Service: savedAccount
 
-    Service -> DB: Save AccountEntity (CHECKING, ZAR 10,000.00 seed balance)
-    DB --> Service: Saved AccountEntity
+    Service -> UDS: loadUserByUsername(savedUser.getEmail())
+    UDS --> Service: UserDetails
+    Service -> JWT: generateToken(userDetails, customerId)
+    JWT --> Service: Bearer JWT (customerId claim)
 
-    Service -> JWT: generateToken(UserDetails, customerId)
-    JWT --> Service: Bearer JWT Access Token
-
-    Service --> Controller: AuthResponseDto (token, customerId, email)
+    Service --> Controller: AuthResponseDto\n(token, customerId, email)
     Controller --> Frontend: <font color=green><b>201 Created</b> (AuthResponseDto)</font>
-    Frontend --> Customer: Registration successful (Redirect to Account Dashboard)
+    Frontend --> Customer: Registration successful (redirect to dashboard)
 end
 @enduml

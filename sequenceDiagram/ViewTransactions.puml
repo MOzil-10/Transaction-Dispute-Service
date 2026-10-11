@@ -12,9 +12,13 @@ box "Frontend Layer" #E6F9E6
 participant "Angular Frontend\n(Web App)" as Frontend
 end box
 
-box "API Gateway & Auth Layer" #FFF9E6
-participant "Spring Boot API\n(REST Controller)" as Controller
-participant "Spring Security\n(JWT / Auth)" as Security
+box "Security & API Layer" #FFF9E6
+participant "JwtAuthenticationFilter" as Filter
+participant "TransactionController" as Controller
+participant "JwtService" as JWT
+participant "TransactionService" as Service
+participant "AccountRepository" as AccountRepo
+participant "TransactionRepository" as TxnRepo
 end box
 
 box "Database Layer" #F2E6FF
@@ -22,18 +26,38 @@ database "PostgreSQL\n(Database)" as DB
 end box
 
 Customer -> Frontend: View transactions
-Frontend -> Controller: GET /api/v1/transactions?page=0&size=10
+Frontend -> Filter: GET /api/v1/transactions?page=0&size=10\n(Authorization: Bearer <JWT>)
 
-Controller -> Security: Validate JWT Token
+Filter -> JWT: extractEmail(jwt) + isTokenValid(jwt, userDetails)
 alt #LightPink Token Invalid / Expired
-    Security --> Controller: Token invalid
-    Controller --> Frontend: <font color=red><b>401 Unauthorized</b> (JWT expired/invalid)</font>
+    JWT --> Filter: invalid
+    Filter --> Frontend: <font color=red><b>401 Unauthorized</b></font>
     Frontend --> Customer: Redirect to login screen
 else #LightGreen Token Valid
-    Security --> Controller: Authenticated customer
-    Controller -> DB: Fetch customer transactions
-    DB --> Controller: Transaction list
-    Controller --> Frontend: <font color=green><b>200 OK</b> (Paginated transactions)</font>
-    Frontend --> Customer: Display transactions on dashboard
+    JWT --> Filter: valid (SecurityContext populated)
+    Filter -> Controller: forward authenticated request
+
+    Controller -> JWT: extractCustomerId(token)
+    JWT --> Controller: customerId
+    Controller -> Service: getTransactionPage(customerId, pageable)
+
+    Service -> AccountRepo: findByUserCustomerId(customerId)
+    AccountRepo -> DB: SELECT ... FROM accounts WHERE customer_id = ?
+    DB --> AccountRepo: AccountEntity
+    AccountRepo --> Service: AccountEntity
+
+    alt #LightPink Account Not Found
+        Service --> Controller: throw ResourceNotFoundException\n(MSG_ACCOUNT_NOT_FOUND)
+        Controller --> Frontend: <font color=red><b>404 Not Found</b> (ErrorResponseDto)</font>
+        Frontend --> Customer: Show error message
+    else #LightGreen Account Found
+        Service -> TxnRepo: findByAccountUserCustomerId(customerId, pageable)
+        TxnRepo -> DB: SELECT ... FROM transactions ORDER BY transaction_date DESC
+        DB --> TxnRepo: Page<TransactionEntity>
+        TxnRepo --> Service: Page<TransactionEntity>
+        Service --> Controller: Page<TransactionResponseDto>\n(mapped via TransactionMapper)
+        Controller --> Frontend: <font color=green><b>200 OK</b> (Paginated transactions)</font>
+        Frontend --> Customer: Display transactions on dashboard
+    end
 end
 @enduml

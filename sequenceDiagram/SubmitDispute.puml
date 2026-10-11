@@ -12,43 +12,82 @@ box "Frontend Layer" #E6F9E6
 participant "Angular Frontend\n(Web App)" as Frontend
 end box
 
-box "API Gateway & Auth Layer" #FFF9E6
-participant "Spring Boot API\n(REST Controller)" as Controller
-participant "Spring Security\n(JWT / Auth)" as Security
+box "Security & API Layer" #FFF9E6
+participant "JwtAuthenticationFilter" as Filter
+participant "DisputeController" as Controller
+participant "JwtService" as JWT
+participant "DisputeService" as Service
 end box
 
-box "Decision Engine Services" #FFE6E6
-participant "Risk Score Engine\n(Java Service)" as RiskEngine
-participant "Decision Rules Matrix\n(Java Service)" as DecisionMatrix
+box "Persistence & Engines" #FFE6E6
+participant "UserRepository" as UserRepo
+participant "TransactionRepository" as TxnRepo
+participant "DisputeRepository" as DisputeRepo
+participant "RiskScoreEngine" as RiskEngine
+participant "DecisionMatrix" as DecisionMatrix
+participant "SqsPublisherService" as SqsPublisher
 end box
 
-box "Database Layer" #F2E6FF
+box "Infrastructure" #F2E6FF
 database "PostgreSQL\n(Database)" as DB
+queue "AWS SQS\n(dispute-events.fifo)" as SQS
 end box
 
 Customer -> Frontend: Select transaction & provide reason
-Frontend -> Controller: POST /api/v1/disputes
+Frontend -> Filter: POST /api/v1/disputes\n(Authorization: Bearer <JWT>, DisputeRequestDto)
 
-Controller -> Security: Validate JWT & get customer ID
-Security --> Controller: Authenticated customer
+Filter -> JWT: isTokenValid(jwt, userDetails)
+alt #LightPink Token Invalid / Missing
+    Filter --> Frontend: <font color=red><b>401 Unauthorized</b></font>
+    Frontend --> Customer: Prompt login
+else #LightGreen Token Valid
+    Filter -> Controller: forward authenticated request
+    Controller -> JWT: extractCustomerId(token)
+    JWT --> Controller: customerId
+    Controller -> Service: submitDispute(customerId, request)
 
-Controller -> DB: Validate transaction ownership & eligibility
-DB --> Controller: Transaction details
+    Service -> UserRepo: findById(customerId)
+    UserRepo -> DB: SELECT ... FROM customers WHERE customer_id = ?
+    DB --> UserRepo: UserEntity
+    UserRepo --> Service: UserEntity
 
-alt #LightPink Transaction Ineligible or Not Owned
-    Controller --> Frontend: <font color=red><b>400 Bad Request / 403 Forbidden</b> (Ineligible transaction)</font>
-    Frontend --> Customer: Show error message
-else #LightGreen Transaction Valid & Eligible
-    Controller -> RiskEngine: Calculate risk score
-    RiskEngine --> Controller: Risk score (e.g., 55/100)
+    Service -> TxnRepo: findById(request.transactionId())
+    TxnRepo -> DB: SELECT ... FROM transactions WHERE transaction_id = ?
+    DB --> TxnRepo: TransactionEntity
+    TxnRepo --> Service: TransactionEntity
 
-    Controller -> DecisionMatrix: Evaluate decision rules
-    DecisionMatrix --> Controller: Decision (MANUAL_REVIEW or AUTO_APPROVE)
+    alt #LightPink Transaction Not Owned by Customer
+        Service --> Controller: throw UnauthorizedException\n(MSG_UNAUTHORIZED_TRANSACTION_ACCESS)
+        Controller --> Frontend: <font color=red><b>401 Unauthorized</b> (ErrorResponseDto)</font>
+        Frontend --> Customer: Show error message
+    else #LightPink Duplicate Dispute Exists
+        Service -> DisputeRepo: existsByTransactionTransactionId(transactionId)
+        DisputeRepo --> Service: true
+        Service --> Controller: throw BadRequestException\n(MSG_DISPUTE_ALREADY_EXISTS)
+        Controller --> Frontend: <font color=red><b>400 Bad Request</b> (ErrorResponseDto)</font>
+        Frontend --> Customer: Show error message
+    else #LightGreen Valid & Eligible
+        Service -> RiskEngine: calculate(transaction, reason)
+        RiskEngine --> Service: riskScore (0-100)
 
-    Controller -> DB: Save dispute (risk score, decision, reason)
-    DB --> Controller: Dispute saved (id + reference)
+        Service -> DecisionMatrix: evaluate(riskScore)
+        DecisionMatrix --> Service: AUTO_APPROVE (<=50)\nor MANUAL_INVESTIGATION (>50)
 
-    Controller --> Frontend: <font color=green><b>201 Created</b> (Dispute reference + status)</font>
-    Frontend --> Customer: Show confirmation (Dispute Reference)
+        Service -> DisputeRepo: save(DisputeEntity)\n(status AUTO_APPROVED or QUEUED_FOR_AGENT)
+        DisputeRepo -> DB: INSERT INTO disputes (dispute_seq)
+        DB --> DisputeRepo: savedDispute (disputeReference)
+        DisputeRepo --> Service: savedDispute
+
+        Service -> SqsPublisher: publishDisputeEvent(savedDispute)
+        SqsPublisher -> SQS: sendMessage(dispute event JSON)
+        SQS --> SqsPublisher: sqsMessageId
+        SqsPublisher --> Service: sqsMessageId
+        Service -> DisputeRepo: save(dispute with sqsMessageId)
+        DisputeRepo -> DB: UPDATE disputes SET sqs_message_id = ?
+
+        Service --> Controller: DisputeResponseDto\n(disputeReference, riskScore, decisionRoute, status, message)
+        Controller --> Frontend: <font color=green><b>201 Created</b> (DisputeResponseDto)</font>
+        Frontend --> Customer: Show confirmation (dispute reference + outcome)
+    end
 end
 @enduml

@@ -12,9 +12,13 @@ box "Frontend Layer" #E6F9E6
 participant "Angular Frontend\n(Web App)" as Frontend
 end box
 
-box "API Gateway & Auth Layer" #FFF9E6
-participant "Spring Boot API\n(REST Controller)" as Controller
-participant "Spring Security\n(JWT / Auth)" as Security
+box "Security & API Layer" #FFF9E6
+participant "JwtAuthenticationFilter" as Filter
+participant "DisputeController" as Controller
+participant "JwtService" as JWT
+participant "DisputeService" as Service
+participant "UserRepository" as UserRepo
+participant "DisputeRepository" as DisputeRepo
 end box
 
 box "Database Layer" #F2E6FF
@@ -22,18 +26,38 @@ database "PostgreSQL\n(Database)" as DB
 end box
 
 Customer -> Frontend: View dispute history
-Frontend -> Controller: GET /api/v1/disputes?page=0&size=10
+Frontend -> Filter: GET /api/v1/disputes?page=0&size=10\n(Authorization: Bearer <JWT>)
 
-Controller -> Security: Validate JWT Token
+Filter -> JWT: extractEmail(jwt) + isTokenValid(jwt, userDetails)
 alt #LightPink Token Expired or Missing
-    Security --> Controller: Unauthorized
-    Controller --> Frontend: <font color=red><b>401 Unauthorized</b> (Token invalid)</font>
+    JWT --> Filter: invalid
+    Filter --> Frontend: <font color=red><b>401 Unauthorized</b></font>
     Frontend --> Customer: Prompt login
 else #LightGreen Token Verified
-    Security --> Controller: Authenticated customer
-    Controller -> DB: Fetch customer disputes
-    DB --> Controller: Dispute history list
-    Controller --> Frontend: <font color=green><b>200 OK</b> (Paginated disputes)</font>
-    Frontend --> Customer: Display dispute history page
+    JWT --> Filter: valid (SecurityContext populated)
+    Filter -> Controller: forward authenticated request
+
+    Controller -> JWT: extractCustomerId(token)
+    JWT --> Controller: customerId
+    Controller -> Service: getDisputeHistory(customerId, pageable)
+
+    Service -> UserRepo: existsById(customerId)
+    UserRepo -> DB: SELECT COUNT ... FROM customers WHERE customer_id = ?
+    DB --> UserRepo: boolean
+    UserRepo --> Service: boolean
+
+    alt #LightPink Customer Not Found
+        Service --> Controller: throw ResourceNotFoundException\n(MSG_USER_NOT_FOUND_ID)
+        Controller --> Frontend: <font color=red><b>404 Not Found</b> (ErrorResponseDto)</font>
+        Frontend --> Customer: Show error message
+    else #LightGreen Customer Found
+        Service -> DisputeRepo: findByUserCustomerIdOrderByCreatedAtDesc(customerId, pageable)
+        DisputeRepo -> DB: SELECT ... FROM disputes ORDER BY created_at DESC
+        DB --> DisputeRepo: Page<DisputeEntity>
+        DisputeRepo --> Service: Page<DisputeEntity>
+        Service --> Controller: Page<DisputeResponseDto>\n(mapped via DisputeMapper)
+        Controller --> Frontend: <font color=green><b>200 OK</b> (Paginated disputes)</font>
+        Frontend --> Customer: Display dispute history page
+    end
 end
 @enduml
