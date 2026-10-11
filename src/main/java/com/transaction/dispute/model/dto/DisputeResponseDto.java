@@ -35,6 +35,9 @@ public record DisputeResponseDto(
         @Schema(description = "Current lifecycle status of the dispute", example = "QUEUED_FOR_AGENT")
         DisputeStatus status,
 
+        @Schema(description = "Amount refunded to the account for an auto-approved dispute; null if not refunded", example = "450.00")
+        BigDecimal refundedAmount,
+
         @Schema(description = "User-friendly status message detailing the resolution or next steps", example = "Dispute submitted successfully and queued for back-office agent review.")
         String message,
 

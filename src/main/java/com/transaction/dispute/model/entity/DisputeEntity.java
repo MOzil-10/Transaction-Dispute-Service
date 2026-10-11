@@ -8,6 +8,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Getter
@@ -52,6 +53,12 @@ public class DisputeEntity {
 
     @Column(name = "sqs_message_id", length = 100)
     private String sqsMessageId;
+
+    @Column(name = "refunded_amount", precision = 19, scale = 2)
+    private BigDecimal refundedAmount;
+
+    @Column(name = "refunded_at")
+    private OffsetDateTime refundedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

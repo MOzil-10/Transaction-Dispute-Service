@@ -46,9 +46,9 @@ class AuthServiceTest {
     }
 
     // This test verifies that registering a new customer persists the user entity in H2 database
-    // and automatically provisions a default checking account associated with that user.
+    // and automatically provisions a default main account associated with that user.
     @Test
-    @DisplayName("Should successfully register user and provision checking account in H2 database")
+    @DisplayName("Should successfully register user and provision main account in H2 database")
     void register_ShouldSaveUserAndProvisionAccount() {
         // Given
         RegisterRequestDto request = TestPayloadFactory.createRegisterRequest();
@@ -66,7 +66,7 @@ class AuthServiceTest {
         assertThat(savedUser).isPresent();
         assertThat(savedUser.get().getFirstName()).isEqualTo(request.firstName());
 
-        // Verify Default Checking Account was provisioned in H2 DB
+        // Verify Default Main Account was provisioned in H2 DB
         Optional<AccountEntity> savedAccount = accountRepository.findByUserCustomerId(savedUser.get().getCustomerId());
         assertThat(savedAccount).isPresent();
         assertThat(savedAccount.get().getAccountType()).isEqualTo(AppConstants.DEFAULT_ACCOUNT_TYPE);

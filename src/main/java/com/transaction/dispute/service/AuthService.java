@@ -40,7 +40,7 @@ public class AuthService {
         log.info("Processing registration request");
 
         if (userRepository.existsByEmail(request.email())) {
-            log.error("Registration rejected â€” email already in use: {}", request.email());
+            log.error("Registration rejected ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â email already in use: {}", request.email());
             throw new BadRequestException(AppConstants.MSG_EMAIL_ALREADY_EXISTS);
         }
 
@@ -64,12 +64,12 @@ public class AuthService {
                 .build();
 
         accountRepository.save(account);
-        log.debug("Provisioned default {} checking account for customerId={}", AppConstants.DEFAULT_CURRENCY, savedUser.getCustomerId());
+        log.debug("Provisioned default {} main account for customerId={}", AppConstants.DEFAULT_CURRENCY, savedUser.getCustomerId());
 
         var userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
         String token = jwtService.generateToken(userDetails, savedUser.getCustomerId());
 
-        log.info("Registration complete â€” customerId={} provisioned with checking account", savedUser.getCustomerId());
+        log.info("Registration complete ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â customerId={} provisioned with main account", savedUser.getCustomerId());
         return new AuthResponseDto(token, savedUser.getCustomerId(), savedUser.getEmail());
     }
 
@@ -79,20 +79,20 @@ public class AuthService {
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.email(), request.password()));
         } catch (BadCredentialsException ex) {
-            log.error("Login failed â€” invalid credentials for email: {}", request.email());
+            log.error("Login failed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â invalid credentials for email: {}", request.email());
             throw new UnauthorizedException(AppConstants.MSG_INVALID_CREDENTIALS);
         }
 
         UserEntity user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> {
-                    log.error("Login failed â€” no user found for email: {}", request.email());
+                    log.error("Login failed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no user found for email: {}", request.email());
                     return new UnauthorizedException(AppConstants.MSG_INVALID_CREDENTIALS);
                 });
 
         var userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String token = jwtService.generateToken(userDetails, user.getCustomerId());
 
-        log.info("Login successful â€” customerId={} authenticated", user.getCustomerId());
+        log.info("Login successful ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â customerId={} authenticated", user.getCustomerId());
         return new AuthResponseDto(token, user.getCustomerId(), user.getEmail());
     }
 }

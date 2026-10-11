@@ -32,13 +32,14 @@ public class AwsSqsConfig {
         var builder = SqsClient.builder()
                 .region(Region.of(region));
 
-        if (accessKeyId != null && secretAccessKey != null) {
+        if (accessKeyId != null && !accessKeyId.isBlank()
+                && secretAccessKey != null && !secretAccessKey.isBlank()) {
             builder.credentialsProvider(
                     StaticCredentialsProvider.create(
                             AwsBasicCredentials.create(accessKeyId, secretAccessKey)));
         }
 
-        if (endpointOverride != null) {
+        if (endpointOverride != null && !endpointOverride.isBlank()) {
             builder.endpointOverride(URI.create(endpointOverride));
         }
 

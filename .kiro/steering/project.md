@@ -1,4 +1,4 @@
-# Transaction Dispute Portal — Project Steering
+# Transaction Dispute Portal â€” Project Steering
 
 ## Project Overview
 
@@ -8,9 +8,9 @@ Customers register, authenticate via JWT, view their account transactions, and l
 disputes that are evaluated by a risk-scoring decision matrix and routed asynchronously
 to a back-office agent queue via AWS SQS.
 
-**Stack:** Java 21 · Spring Boot 3.2 · Spring Security 6 · PostgreSQL/RDS (prod) ·
-H2 in-memory (tests) · Flyway · JJWT 0.12 · MapStruct · Lombok · AWS SDK v2 (SQS) ·
-SpringDoc OpenAPI · JaCoCo
+**Stack:** Java 21 Â· Spring Boot 3.2 Â· Spring Security 6 Â· PostgreSQL/RDS (prod) Â·
+H2 in-memory (tests) Â· Flyway Â· JJWT 0.12 Â· MapStruct Â· Lombok Â· AWS SDK v2 (SQS) Â·
+SpringDoc OpenAPI Â· JaCoCo
 
 ---
 
@@ -25,7 +25,7 @@ SpringDoc OpenAPI · JaCoCo
 | `TransactionEntity` | `transactions` | `transaction_seq` | 2,000,000 |
 | `DisputeEntity` | `disputes` | `dispute_seq` | 3,000,000 |
 
-All primary keys are sequence-based `Long` values — **never** use `IDENTITY` or
+All primary keys are sequence-based `Long` values â€” **never** use `IDENTITY` or
 `AUTO` strategy in production entities. Use `GenerationType.SEQUENCE` with an
 explicit `@SequenceGenerator`.
 
@@ -50,22 +50,22 @@ explicit `@SequenceGenerator`.
 
 | Value | Trigger |
 |-------|---------|
-| `AUTO_APPROVE` | Low risk score — funds auto-credited, SQS notification sent |
-| `MANUAL_INVESTIGATION` | High risk score — queued for back-office agent review via SQS |
+| `AUTO_APPROVE` | Low risk score â€” funds auto-credited, SQS notification sent |
+| `MANUAL_INVESTIGATION` | High risk score â€” queued for back-office agent review via SQS |
 
 ### Dispute Lifecycle
 
 ```
-SUBMITTED → AUTO_APPROVED  (decision route: AUTO_APPROVE)
-         → QUEUED_FOR_AGENT → UNDER_REVIEW → RESOLVED
-                                           → REJECTED
+SUBMITTED â†’ AUTO_APPROVED  (decision route: AUTO_APPROVE)
+         â†’ QUEUED_FOR_AGENT â†’ UNDER_REVIEW â†’ RESOLVED
+                                           â†’ REJECTED
 ```
 
 ### Transaction Types (transactionType enum)
 
-`CARD_PAYMENT` · `DEBIT_ORDER` · `TRANSFER` · `ATM_WITHDRAWAL` · `PAYSHAP_PAYMENT`
+`CARD_PAYMENT` Â· `DEBIT_ORDER` Â· `TRANSFER` Â· `ATM_WITHDRAWAL` Â· `PAYSHAP_PAYMENT`
 
-> Note: `transactionType` enum class name is lowercase — fix to `TransactionType`
+> Note: `transactionType` enum class name is lowercase â€” fix to `TransactionType`
 > (PascalCase) when next touching this file.
 
 ---
@@ -74,40 +74,40 @@ SUBMITTED → AUTO_APPROVED  (decision route: AUTO_APPROVE)
 
 ```
 com.transaction.dispute
-├── common/         AppConstants only — all strings, currencies, defaults centralised here
-├── config/         Spring beans: ApplicationConfig, SecurityConfig, OpenApiConfig
-├── controller/     REST endpoints — thin layer, delegate to service immediately
-├── exception/      Domain exceptions + GlobalExceptionHandler
-├── mapper/         MapStruct interfaces only — no logic in mappers
-├── model/
-│   ├── dto/        Java records for all request/response payloads
-│   ├── entity/     JPA entities (@Builder, no @Data)
-│   └── enums/      Domain enumerations
-├── repository/     Spring Data JPA interfaces only
-├── security/       JwtService + JwtAuthenticationFilter
-└── service/        All business logic and transaction boundaries
+â”œâ”€â”€ common/         AppConstants only â€” all strings, currencies, defaults centralised here
+â”œâ”€â”€ config/         Spring beans: ApplicationConfig, SecurityConfig, OpenApiConfig
+â”œâ”€â”€ controller/     REST endpoints â€” thin layer, delegate to service immediately
+â”œâ”€â”€ exception/      Domain exceptions + GlobalExceptionHandler
+â”œâ”€â”€ mapper/         MapStruct interfaces only â€” no logic in mappers
+â”œâ”€â”€ model/
+â”‚   â”œâ”€â”€ dto/        Java records for all request/response payloads
+â”‚   â”œâ”€â”€ entity/     JPA entities (@Builder, no @Data)
+â”‚   â””â”€â”€ enums/      Domain enumerations
+â”œâ”€â”€ repository/     Spring Data JPA interfaces only
+â”œâ”€â”€ security/       JwtService + JwtAuthenticationFilter
+â””â”€â”€ service/        All business logic and transaction boundaries
 ```
 
 ---
 
 ## Security Architecture
 
-- **Spring Security 6** — stateless session management (`STATELESS`).
-- **JWT (JJWT 0.12)** — Bearer token authentication. Tokens include `customerId` claim.
-- **BCrypt** — password encoding via `BCryptPasswordEncoder`.
-- **`ApplicationConfig`** — decoupled bean wiring (`UserDetailsService`, `AuthenticationProvider`,
+- **Spring Security 6** â€” stateless session management (`STATELESS`).
+- **JWT (JJWT 0.12)** â€” Bearer token authentication. Tokens include `customerId` claim.
+- **BCrypt** â€” password encoding via `BCryptPasswordEncoder`.
+- **`ApplicationConfig`** â€” decoupled bean wiring (`UserDetailsService`, `AuthenticationProvider`,
   `AuthenticationManager`, `PasswordEncoder`) to avoid circular dependency with `SecurityConfig`.
-- **`JwtAuthenticationFilter`** — `OncePerRequestFilter` that validates Bearer tokens and
+- **`JwtAuthenticationFilter`** â€” `OncePerRequestFilter` that validates Bearer tokens and
   populates `SecurityContextHolder` on every request.
 
 ### Public Endpoints
 
 ```
-/api/v1/auth/register    POST  — open
-/api/v1/auth/login       POST  — open
-/v3/api-docs/**                — open
-/swagger-ui/**                 — open
-/actuator/**                   — open
+/api/v1/auth/register    POST  â€” open
+/api/v1/auth/login       POST  â€” open
+/v3/api-docs/**                â€” open
+/swagger-ui/**                 â€” open
+/actuator/**                   â€” open
 ```
 
 Everything else requires a valid Bearer JWT.
@@ -125,9 +125,9 @@ Everything else requires a valid Bearer JWT.
 - Flyway enabled, `ddl-auto: validate`.
 - H2-compatible migrations in `src/test/resources/db/migration-h2/`.
 - Uses `GENERATED BY DEFAULT AS IDENTITY (START WITH N)` for PKs.
-- Named `CREATE SEQUENCE` declarations must be present — Hibernate `validate` checks them.
+- Named `CREATE SEQUENCE` declarations must be present â€” Hibernate `validate` checks them.
 - `MODE=PostgreSQL;NON_KEYWORDS=VALUE` in the JDBC URL.
-- Flyway `locations: classpath:db/migration-h2` — isolated from production SQL.
+- Flyway `locations: classpath:db/migration-h2` â€” isolated from production SQL.
 
 ### Rules
 - **Never use `create-drop`** in any profile.
@@ -141,23 +141,23 @@ Everything else requires a valid Bearer JWT.
 ## Coding Standards
 
 ### Controllers
-- One method per endpoint. No business logic — validate input, call service, return response.
+- One method per endpoint. No business logic â€” validate input, call service, return response.
 - Return `ResponseEntity<T>` with explicit HTTP status codes.
 - Annotate with `@Tag`, `@Operation`, and `@ApiResponses` for OpenAPI docs.
 
 ### Services
 - Own all business logic and `@Transactional` boundaries.
-- Never return entities — always map to DTOs via the mapper layer.
+- Never return entities â€” always map to DTOs via the mapper layer.
 
 ### Entities
 - Use `@Builder`, `@Getter`, `@Setter`, `@NoArgsConstructor`, `@AllArgsConstructor`.
-- **Never use `@Data`** — causes issues with Hibernate lazy proxies and equals/hashCode.
+- **Never use `@Data`** â€” causes issues with Hibernate lazy proxies and equals/hashCode.
 - All timestamps use `OffsetDateTime` with `@CreationTimestamp` / `@UpdateTimestamp`.
 - Lazy fetch on all `@ManyToOne` and `@OneToOne` associations.
 
 ### Constants
 - All string literals (messages, defaults, header names) live in `AppConstants`.
-- Default currency is `ZAR`. Default account type is `CHECKING`.
+- Default currency is `ZAR`. Default account type is `MAIN_ACCOUNT`.
 - **Zero hardcoding** in service or controller logic.
 
 ### Error Handling
@@ -178,12 +178,12 @@ Use `@Slf4j` (Lombok) on every class that logs. Never use `System.out.println`.
 |-------|-------------|
 | `info` | Business events: request received, operation completed |
 | `debug` | Internal state: entity persisted, token generated, cache hit |
-| `error` | Any failure path — including 4xx business exceptions |
+| `error` | Any failure path â€” including 4xx business exceptions |
 
 All `@ExceptionHandler` methods in `GlobalExceptionHandler` log at `error` level,
 regardless of HTTP status code (4xx or 5xx).
 
-### PII Policy — CRITICAL
+### PII Policy â€” CRITICAL
 
 This is a **regulated South African financial application**. Logs must **never** contain:
 
@@ -200,11 +200,11 @@ codes, mandate types, and non-identifying operation descriptors.
 
 ```java
 // Correct
-log.info("Dispute submitted — disputeReference={}", entity.getDisputeReference());
-log.info("Registration complete — customerId={}", savedUser.getCustomerId());
-log.error("Login failed — invalid credentials supplied");
+log.info("Dispute submitted â€” disputeReference={}", entity.getDisputeReference());
+log.info("Registration complete â€” customerId={}", savedUser.getCustomerId());
+log.error("Login failed â€” invalid credentials supplied");
 
-// Incorrect — never do this
+// Incorrect â€” never do this
 log.info("Login failed for email: {}", request.email());   // PII violation
 log.info("Customer: {} {}", firstName, lastName);          // PII violation
 ```
@@ -217,8 +217,8 @@ log.info("Customer: {} {}", firstName, lastName);          // PII violation
 - Every `@SpringBootTest` class **must** carry `@ActiveProfiles("test")`.
 - Controller tests: `@SpringBootTest + @AutoConfigureMockMvc`, mock the service with `@MockBean`.
 - Service integration tests: `@SpringBootTest + @Transactional`, autowire real repositories.
-- Mapper tests: `Mappers.getMapper(SomeMapper.class)` — no Spring context required.
-- All test fixtures are built in `TestPayloadFactory` — add factory methods there, never inline.
+- Mapper tests: `Mappers.getMapper(SomeMapper.class)` â€” no Spring context required.
+- All test fixtures are built in `TestPayloadFactory` â€” add factory methods there, never inline.
 
 ### Coverage
 - JaCoCo enforces **80% minimum line coverage** on `mvn verify`.

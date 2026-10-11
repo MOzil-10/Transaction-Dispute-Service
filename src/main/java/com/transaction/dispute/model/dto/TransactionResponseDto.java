@@ -32,5 +32,8 @@ public record TransactionResponseDto(
         TransactionStatus status,
 
         @Schema(description = "Timestamp when the transaction cleared on the bank network", example = "2026-09-28T10:15:00+02:00")
-        OffsetDateTime transactionDate
+        OffsetDateTime transactionDate,
+
+        @Schema(description = "Whether this transaction is eligible to be disputed", example = "true")
+        boolean disputable
 ) {}

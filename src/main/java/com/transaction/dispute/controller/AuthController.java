@@ -28,9 +28,9 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @Operation(summary = "Register a new customer", description = "Registers a new customer account, encodes password credentials, automatically provisions a primary ZAR checking account, and returns an initial JWT authentication token.")
+    @Operation(summary = "Register a new customer", description = "Registers a new customer account, encodes password credentials, automatically provisions a primary ZAR transactional (Main) account, and returns an initial JWT authentication token.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Customer registered and checking account provisioned successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthResponseDto.class))),
+            @ApiResponse(responseCode = "201", description = "Customer registered and main account provisioned successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthResponseDto.class))),
             @ApiResponse(responseCode = "400", description = "Validation failure or email address already registered", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class))),
             @ApiResponse(responseCode = "500", description = "Internal server error occurred while processing registration", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)))
     })
@@ -38,7 +38,7 @@ public class AuthController {
     public ResponseEntity<AuthResponseDto> register(@Valid @RequestBody RegisterRequestDto request) {
         log.info("Received registration request"); // 3. Add log statement
         AuthResponseDto response = authService.register(request);
-        log.info("Successfully registered customer — customerId={}", response.customerId());
+        log.info("Successfully registered customer - customerId={}", response.customerId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

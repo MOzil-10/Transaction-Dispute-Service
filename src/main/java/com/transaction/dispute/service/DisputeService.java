@@ -5,15 +5,17 @@ import com.transaction.dispute.engine.DecisionMatrix;
 import com.transaction.dispute.engine.RiskScoreEngine;
 import com.transaction.dispute.exception.BadRequestException;
 import com.transaction.dispute.exception.ResourceNotFoundException;
-import com.transaction.dispute.exception.UnauthorizedException;
+import com.transaction.dispute.exception.ForbiddenException;
 import com.transaction.dispute.mapper.DisputeMapper;
 import com.transaction.dispute.model.dto.DisputeRequestDto;
 import com.transaction.dispute.model.dto.DisputeResponseDto;
+import com.transaction.dispute.model.entity.AccountEntity;
 import com.transaction.dispute.model.entity.DisputeEntity;
 import com.transaction.dispute.model.entity.TransactionEntity;
 import com.transaction.dispute.model.entity.UserEntity;
 import com.transaction.dispute.model.enums.DecisionRoute;
 import com.transaction.dispute.model.enums.DisputeStatus;
+import com.transaction.dispute.repository.AccountRepository;
 import com.transaction.dispute.repository.DisputeRepository;
 import com.transaction.dispute.repository.TransactionRepository;
 import com.transaction.dispute.repository.UserRepository;
@@ -24,6 +26,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Service
@@ -34,24 +41,23 @@ public class DisputeService {
     private final DisputeRepository disputeRepository;
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
+    private final AccountRepository accountRepository;
     private final DisputeMapper disputeMapper;
     private final RiskScoreEngine riskScoreEngine;
     private final DecisionMatrix decisionMatrix;
     private final SqsPublisherService sqsPublisherService;
+    private final Clock clock;
 
     @Transactional
     public DisputeResponseDto submitDispute(Long customerId, DisputeRequestDto request) {
-        log.info("Processing dispute submission — customerId={}, transactionId={}",
-                customerId, request.transactionId());
+        log.info("Processing dispute submission — customerId={}, transactionId={}", customerId, request.transactionId());
 
-        // Resolve customer
         UserEntity customer = userRepository.findById(customerId)
                 .orElseThrow(() -> {
                     log.error("Customer not found — customerId={}", customerId);
                     return new ResourceNotFoundException(AppConstants.MSG_USER_NOT_FOUND_ID + customerId);
                 });
 
-        // Resolve and validate transaction
         TransactionEntity transaction = transactionRepository.findById(request.transactionId())
                 .orElseThrow(() -> {
                     log.error("Transaction not found — transactionId={}", request.transactionId());
@@ -60,10 +66,15 @@ public class DisputeService {
 
         // Ownership check — transaction must belong to the authenticated customer
         if (!transaction.getAccount().getUser().getCustomerId().equals(customerId)) {
-            log.error("Unauthorized dispute attempt — customerId={} does not own transactionId={}",
-                    customerId, request.transactionId());
-            throw new UnauthorizedException(AppConstants.MSG_UNAUTHORIZED_TRANSACTION_ACCESS);
+            log.error("Unauthorized dispute attempt — customerId={} does not own transactionId={}", customerId, request.transactionId());
+            throw new ForbiddenException(AppConstants.MSG_UNAUTHORIZED_TRANSACTION_ACCESS);
         }
+
+        // 60-day regulatory dispute window (PASA, effective 2026-04-13)
+        assertWithinDisputeWindow(transaction);
+
+        // Transaction-category eligibility
+        assertCategoryDisputable(transaction);
 
         // Duplicate dispute guard
         if (disputeRepository.existsByTransactionTransactionId(request.transactionId())) {
@@ -78,8 +89,7 @@ public class DisputeService {
                 ? DisputeStatus.AUTO_APPROVED
                 : DisputeStatus.QUEUED_FOR_AGENT;
 
-        log.debug("Dispute decision — transactionId={}, riskScore={}, route={}, status={}",
-                request.transactionId(), riskScore, decisionRoute, status);
+        log.debug("Dispute decision — transactionId={}, riskScore={}, route={}, status={}", request.transactionId(), riskScore, decisionRoute, status);
 
         // Persist dispute
         DisputeEntity dispute = DisputeEntity.builder()
@@ -96,13 +106,16 @@ public class DisputeService {
         DisputeEntity saved = disputeRepository.save(dispute);
         log.info("Dispute saved — disputeReference={}, status={}", saved.getDisputeReference(), saved.getStatus());
 
+        // Apply auto-approve refund (atomic with dispute within this @Transactional method)
+        applyRefundIfEligible(saved, transaction, decisionRoute);
+        disputeRepository.save(saved);
+
         // Publish event to SQS — non-fatal, sqsMessageId stored for audit
         String sqsMessageId = sqsPublisherService.publishDisputeEvent(saved);
         if (sqsMessageId != null) {
             saved.setSqsMessageId(sqsMessageId);
             disputeRepository.save(saved);
-            log.debug("SQS message ID persisted — disputeReference={}, sqsMessageId={}",
-                    saved.getDisputeReference(), sqsMessageId);
+            log.debug("SQS message ID persisted — disputeReference={}, sqsMessageId={}", saved.getDisputeReference(), sqsMessageId);
         }
 
         // Resolve user-facing message from decision
@@ -120,6 +133,7 @@ public class DisputeService {
                 dto.riskScore(),
                 dto.decisionRoute(),
                 dto.status(),
+                saved.getRefundedAmount(),
                 message,
                 saved.getCreatedAt()
         );
@@ -130,7 +144,7 @@ public class DisputeService {
         log.info("Fetching dispute history — customerId={}", customerId);
 
         if (!userRepository.existsById(customerId)) {
-            log.error("Customer not found — customerId={}", customerId);
+            log.error("Customer not found customerId={}", customerId);
             throw new ResourceNotFoundException(AppConstants.MSG_USER_NOT_FOUND_ID + customerId);
         }
 
@@ -150,6 +164,7 @@ public class DisputeService {
                             dto.riskScore(),
                             dto.decisionRoute(),
                             dto.status(),
+                            entity.getRefundedAmount(),
                             message,
                             entity.getCreatedAt()
                     );
@@ -157,6 +172,37 @@ public class DisputeService {
 
         log.debug("Found {} disputes for customerId={}", page.getTotalElements(), customerId);
         return page;
+    }
+
+    private void assertWithinDisputeWindow(TransactionEntity transaction) {
+        ZoneId zone = ZoneId.of(AppConstants.DISPUTE_TIMEZONE);
+        LocalDate txDate = transaction.getTransactionDate().atZoneSameInstant(zone).toLocalDate();
+        LocalDate today = LocalDate.now(clock);
+        long elapsed = ChronoUnit.DAYS.between(txDate, today);
+        if (elapsed > AppConstants.DISPUTE_WINDOW_DAYS) {
+            log.error("Dispute window closed — transactionId={}, elapsedDays={}", transaction.getTransactionId(), elapsed);
+            throw new BadRequestException(AppConstants.MSG_DISPUTE_WINDOW_CLOSED);
+        }
+    }
+
+    private void applyRefundIfEligible(DisputeEntity dispute, TransactionEntity transaction, DecisionRoute route) {
+        // Idempotency: never credit twice (Req 7)
+        if (route != DecisionRoute.AUTO_APPROVE || dispute.getRefundedAmount() != null) {
+            return;
+        }
+        AccountEntity account = transaction.getAccount();
+        account.setBalance(account.getBalance().add(transaction.getAmount()));
+        accountRepository.save(account);
+        dispute.setRefundedAmount(transaction.getAmount());
+        dispute.setRefundedAt(OffsetDateTime.now(clock));
+        log.info("Dispute auto-approved refund applied — disputeReference={}, refundedAmount={}", dispute.getDisputeReference(), dispute.getRefundedAmount());
+    }
+
+    private void assertCategoryDisputable(TransactionEntity transaction) {
+        if (!transaction.getCategory().isDisputable()) {
+            log.error("Non-disputable category rejected — transactionId={}, category={}", transaction.getTransactionId(), transaction.getCategory());
+            throw new BadRequestException(AppConstants.MSG_CATEGORY_NOT_DISPUTABLE);
+        }
     }
 }
 

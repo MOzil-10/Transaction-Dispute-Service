@@ -8,7 +8,7 @@ import java.util.List;
 @Schema(name = "AccountOverview", description = "Aggregated customer account summary including live balance and recent transaction history")
 public record AccountOverviewDto(
 
-        @Schema(description = "Customer checking account number", example = "1002938481")
+        @Schema(description = "Customer transactional (Main) account number", example = "1002938481")
         String accountNumber,
 
         @Schema(description = "Current available ledger balance", example = "12450.00")

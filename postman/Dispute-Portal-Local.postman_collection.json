@@ -1,0 +1,603 @@
+{
+    "info":  {
+                 "name":  "Dispute Portal - Local (Regulatory)",
+                 "description":  "Local testing collection for the Transaction Dispute Portal, updated for the regulatory-dispute-eligibility feature (60-day window, category eligibility, auto-approve refund).\n\nSeeded users share password Password123!:\n- Trevor Sesoko  trevor.sesoko@example.co.za\n- Mesut Ozil     mesut.ozil@example.co.za\n- Donald Duck    donald.duck@example.co.za\n\nKey seeded transactions (Trevor):\n- 2000001 VIRGIN ACTIVE GYM   DEBICHECK    GYM_MEMBERSHIP  (disputable, recent)\n- 2000002 ABSA HOME LOAN      STANDARD_EFT LOAN            (disputable, recent)\n- 2000003 PICK N PAY          DEBICHECK    IN_STORE_RETAIL (NON-disputable -\u003e 400)\n- 2000010 TAKEALOT            DEBICHECK    ONLINE_RETAIL   (disputable, recent -\u003e AUTO_APPROVE + refund)\n- 2000011 OLD FINANCE LOAN    STANDARD_EFT LOAN            (disputable but 90 days old -\u003e 400 window closed)\n\nLogin requests auto-save the JWT into collection variables.",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "variable":  [
+                     {
+                         "key":  "baseUrl",
+                         "value":  "http://localhost:8087"
+                     },
+                     {
+                         "key":  "trevorToken",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "mesutToken",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "donaldToken",
+                         "value":  ""
+                     }
+                 ],
+    "item":  [
+                 {
+                     "name":  "Auth",
+                     "item":  [
+                                  {
+                                      "name":  "Login - Trevor",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"200 OK\", () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.collectionVariables.set(\"trevorToken\", pm.response.json().token);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"trevor.sesoko@example.co.za\",\n  \"password\": \"Password123!\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/auth/login",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Login - Mesut",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"200 OK\", () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.collectionVariables.set(\"mesutToken\", pm.response.json().token);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"mesut.ozil@example.co.za\",\n  \"password\": \"Password123!\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/auth/login",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Login - Donald",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"200 OK\", () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.collectionVariables.set(\"donaldToken\", pm.response.json().token);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"donald.duck@example.co.za\",\n  \"password\": \"Password123!\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/auth/login",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              }
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Transactions",
+                     "item":  [
+                                  {
+                                      "name":  "Get Transactions - Trevor (check disputable flag)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"200 OK\", () =\u003e pm.response.to.have.status(200));",
+                                                                                    "var items = pm.response.json().content;",
+                                                                                    "pm.test(\"each transaction exposes a disputable flag\", function () {",
+                                                                                    "  items.forEach(t =\u003e pm.expect(t).to.have.property(\u0027disputable\u0027));",
+                                                                                    "});",
+                                                                                    "var pnp = items.find(t =\u003e t.transactionId === 2000003);",
+                                                                                    "if (pnp) { pm.test(\"Pick n Pay (IN_STORE_RETAIL) is not disputable\", () =\u003e pm.expect(pnp.disputable).to.eql(false)); }",
+                                                                                    "var tak = items.find(t =\u003e t.transactionId === 2000010);",
+                                                                                    "if (tak) { pm.test(\"Takealot (ONLINE_RETAIL) is disputable\", () =\u003e pm.expect(tak.disputable).to.eql(true)); }"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{trevorToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/transactions?page=0\u0026size=20",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "transactions"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "page",
+                                                                                    "value":  "0"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "size",
+                                                                                    "value":  "20"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Disputes",
+                     "item":  [
+                                  {
+                                      "name":  "AUTO_APPROVE + REFUND (Trevor Gym DebiCheck 2000001)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"201 Created\", () =\u003e pm.response.to.have.status(201));",
+                                                                                    "var j = pm.response.json();",
+                                                                                    "pm.test(\"routed AUTO_APPROVE\", () =\u003e pm.expect(j.decisionRoute).to.eql(\"AUTO_APPROVE\"));",
+                                                                                    "pm.test(\"status AUTO_APPROVED\", () =\u003e pm.expect(j.status).to.eql(\"AUTO_APPROVED\"));",
+                                                                                    "pm.test(\"refundedAmount is populated\", () =\u003e pm.expect(j.refundedAmount).to.not.be.null);",
+                                                                                    "console.log(\"disputeReference=\" + j.disputeReference + \" refundedAmount=\" + j.refundedAmount);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{trevorToken}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"transactionId\": 2000001,\n  \"reason\": \"INCORRECT_DATE\",\n  \"description\": \"Gym debit taken on the wrong date.\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/disputes",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "disputes"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "MANUAL_INVESTIGATION no refund (Trevor Takealot 2000010)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"201 Created\", () =\u003e pm.response.to.have.status(201));",
+                                                                                    "var j = pm.response.json();",
+                                                                                    "pm.test(\"routed MANUAL_INVESTIGATION\", () =\u003e pm.expect(j.decisionRoute).to.eql(\"MANUAL_INVESTIGATION\"));",
+                                                                                    "pm.test(\"status QUEUED_FOR_AGENT\", () =\u003e pm.expect(j.status).to.eql(\"QUEUED_FOR_AGENT\"));",
+                                                                                    "pm.test(\"no refund for manual investigation\", () =\u003e pm.expect(j.refundedAmount).to.be.null);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{trevorToken}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"transactionId\": 2000010,\n  \"reason\": \"INCORRECT_AMOUNT\",\n  \"description\": \"Online order amount is wrong.\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/disputes",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "disputes"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "CATEGORY NOT DISPUTABLE 400 (Trevor Pick n Pay 2000003)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"400 Bad Request\", () =\u003e pm.response.to.have.status(400));",
+                                                                                    "var j = pm.response.json();",
+                                                                                    "pm.test(\"status 400 in body\", () =\u003e pm.expect(j.status).to.eql(400));",
+                                                                                    "pm.test(\"category-not-disputable message\", () =\u003e pm.expect(j.message).to.include(\"not eligible for dispute\"));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{trevorToken}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"transactionId\": 2000003,\n  \"reason\": \"INCORRECT_AMOUNT\",\n  \"description\": \"Grocery debit disputed - should be blocked.\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/disputes",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "disputes"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "WINDOW CLOSED 400 (Trevor 90-day-old 2000011)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"400 Bad Request\", () =\u003e pm.response.to.have.status(400));",
+                                                                                    "var j = pm.response.json();",
+                                                                                    "pm.test(\"status 400 in body\", () =\u003e pm.expect(j.status).to.eql(400));",
+                                                                                    "pm.test(\"window-closed message\", () =\u003e pm.expect(j.message).to.include(\"60-day dispute window has closed\"));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{trevorToken}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"transactionId\": 2000011,\n  \"reason\": \"UNAUTHORISED_MANDATE\",\n  \"description\": \"Old debit beyond the 60-day window.\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/disputes",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "disputes"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "DUPLICATE 400 (re-run Trevor Gym 2000001)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"400 Bad Request\", () =\u003e pm.response.to.have.status(400));",
+                                                                                    "pm.test(\"duplicate message\", () =\u003e pm.expect(pm.response.json().message).to.include(\"already been lodged\"));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{trevorToken}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"transactionId\": 2000001,\n  \"reason\": \"INCORRECT_DATE\",\n  \"description\": \"Duplicate attempt.\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/disputes",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "disputes"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "FORBIDDEN 403 (Mesut disputes Trevor 2000002)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"403 Forbidden\", () =\u003e pm.response.to.have.status(403));",
+                                                                                    "var j = pm.response.json();",
+                                                                                    "pm.test(\"error is Forbidden\", () =\u003e pm.expect(j.error).to.eql(\"Forbidden\"));",
+                                                                                    "pm.test(\"status 403 in body\", () =\u003e pm.expect(j.status).to.eql(403));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{mesutToken}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"transactionId\": 2000002,\n  \"reason\": \"UNAUTHORISED_MANDATE\",\n  \"description\": \"Disputing someone else\u0027s transaction.\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/disputes",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "disputes"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "NOT FOUND 404 (missing txn)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"404 Not Found\", () =\u003e pm.response.to.have.status(404));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{trevorToken}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"transactionId\": 9999999,\n  \"reason\": \"INCORRECT_AMOUNT\",\n  \"description\": \"No such transaction.\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/disputes",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "disputes"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "VALIDATION 400 (missing fields)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"400 Bad Request\", () =\u003e pm.response.to.have.status(400));",
+                                                                                    "pm.test(\"has validationErrors\", () =\u003e pm.expect(pm.response.json().validationErrors).to.not.be.null);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{trevorToken}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"description\": \"No transactionId or reason.\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/disputes",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "disputes"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Dispute History - Trevor",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{trevorToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/disputes?page=0\u0026size=10",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "disputes"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "page",
+                                                                                    "value":  "0"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "size",
+                                                                                    "value":  "10"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  }
+                                  }
+                              ]
+                 }
+             ]
+}

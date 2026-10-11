@@ -48,7 +48,7 @@ else #LightGreen New Customer
     DB --> UserRepo: savedUser (customerId)
     UserRepo --> Service: savedUser
 
-    Service -> AccountRepo: save(AccountEntity)\n(CHECKING, ZAR 10,000.00 seed)
+    Service -> AccountRepo: save(AccountEntity)\n(MAIN_ACCOUNT, ZAR 10,000.00 seed)
     AccountRepo -> DB: INSERT INTO accounts (account_seq)
     DB --> AccountRepo: savedAccount
     AccountRepo --> Service: savedAccount

@@ -15,6 +15,7 @@ import com.transaction.dispute.model.enums.DecisionRoute;
 import com.transaction.dispute.model.enums.DisputeReason;
 import com.transaction.dispute.model.enums.DisputeStatus;
 import com.transaction.dispute.model.enums.MandateType;
+import com.transaction.dispute.model.enums.TransactionCategory;
 import com.transaction.dispute.model.enums.TransactionStatus;
 
 import java.math.BigDecimal;
@@ -67,6 +68,7 @@ public final class TestPayloadFactory {
                 .amount(new BigDecimal("450.00"))
                 .currency("ZAR")
                 .mandateType(MandateType.STANDARD_EFT)
+                .category(TransactionCategory.GYM_MEMBERSHIP)
                 .status(TransactionStatus.COMPLETED)
                 .transactionDate(OffsetDateTime.now())
                 .build();
@@ -80,6 +82,7 @@ public final class TestPayloadFactory {
                 .amount(new BigDecimal("450.00"))
                 .currency("ZAR")
                 .mandateType(MandateType.STANDARD_EFT)
+                .category(TransactionCategory.GYM_MEMBERSHIP)
                 .status(TransactionStatus.COMPLETED)
                 .transactionDate(OffsetDateTime.now())
                 .build();
@@ -90,7 +93,7 @@ public final class TestPayloadFactory {
                 5000102L, "TXN-90812", "FITNESS_CLUB_ZA",
                 new BigDecimal("450.00"), "ZAR",
                 MandateType.STANDARD_EFT, TransactionStatus.COMPLETED,
-                OffsetDateTime.now()
+                OffsetDateTime.now(), true
         );
     }
 
@@ -106,6 +109,7 @@ public final class TestPayloadFactory {
                 DisputeReason.UNAUTHORISED_MANDATE, 70,
                 DecisionRoute.MANUAL_INVESTIGATION,
                 DisputeStatus.QUEUED_FOR_AGENT,
+                null,
                 AppConstants.MSG_DISPUTE_QUEUED_AGENT,
                 OffsetDateTime.now()
         );

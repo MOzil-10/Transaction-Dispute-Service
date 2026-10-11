@@ -36,8 +36,7 @@ public class SqsPublisherService {
      * @return the SQS message ID, or null if publishing failed (non-fatal)
      */
     public String publishDisputeEvent(DisputeEntity dispute) {
-        log.info("Publishing dispute event to SQS — disputeReference={}, route={}",
-                dispute.getDisputeReference(), dispute.getDecisionRoute());
+        log.info("Publishing dispute event to SQS — disputeReference={}, route={}", dispute.getDisputeReference(), dispute.getDecisionRoute());
         try {
             String messageBody = buildMessageBody(dispute);
 
@@ -50,15 +49,13 @@ public class SqsPublisherService {
                             .build()
             );
 
-            log.info("SQS message sent — sqsMessageId={}, disputeReference={}",
-                    response.messageId(), dispute.getDisputeReference());
+            log.info("SQS message sent — sqsMessageId={}, disputeReference={}", response.messageId(), dispute.getDisputeReference());
             return response.messageId();
 
         } catch (Exception ex) {
             // SQS failure is non-fatal — dispute is already persisted.
             // Log the error and allow the transaction to complete.
-            log.error("Failed to publish dispute event to SQS — disputeReference={}: {}",
-                    dispute.getDisputeReference(), ex.getMessage());
+            log.error("Failed to publish dispute event to SQS — disputeReference={}: {}", dispute.getDisputeReference(), ex.getMessage());
             return null;
         }
     }

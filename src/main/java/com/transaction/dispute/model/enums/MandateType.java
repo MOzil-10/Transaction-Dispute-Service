@@ -2,5 +2,6 @@ package com.transaction.dispute.model.enums;
 
 public enum MandateType {
     STANDARD_EFT,
-    DEBICHECK
+    DEBICHECK,
+    REGISTERED_MANDATE
 }

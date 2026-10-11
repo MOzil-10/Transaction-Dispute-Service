@@ -22,7 +22,7 @@ CREATE TABLE accounts (
     account_id BIGINT PRIMARY KEY DEFAULT nextval('account_seq'),
     customer_id BIGINT NOT NULL,
     account_number VARCHAR(20) NOT NULL UNIQUE,
-    account_type VARCHAR(50) NOT NULL DEFAULT 'CHECKING',
+    account_type VARCHAR(50) NOT NULL DEFAULT 'MAIN_ACCOUNT',
     balance DECIMAL(19,2) NOT NULL DEFAULT 0.00,
     currency VARCHAR(3) NOT NULL DEFAULT 'ZAR',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

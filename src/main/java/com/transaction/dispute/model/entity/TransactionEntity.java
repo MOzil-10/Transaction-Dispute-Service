@@ -1,6 +1,7 @@
 package com.transaction.dispute.model.entity;
 
 import com.transaction.dispute.model.enums.MandateType;
+import com.transaction.dispute.model.enums.TransactionCategory;
 import com.transaction.dispute.model.enums.TransactionStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -44,6 +45,10 @@ public class TransactionEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "mandate_type", nullable = false)
     private MandateType mandateType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", nullable = false, length = 50)
+    private TransactionCategory category;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

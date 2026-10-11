@@ -10,7 +10,7 @@ public final class AppConstants {
     public static final String BEARER_PREFIX = "Bearer ";
     public static final String AUTHORIZATION_HEADER = "Authorization";
     public static final String DEFAULT_CURRENCY = "ZAR";
-    public static final String DEFAULT_ACCOUNT_TYPE = "CHECKING";
+    public static final String DEFAULT_ACCOUNT_TYPE = "MAIN_ACCOUNT";
 
     // Exception & Error Messages
     public static final String MSG_USER_NOT_FOUND_EMAIL = "User not found with email: ";
@@ -23,10 +23,18 @@ public final class AppConstants {
     public static final String MSG_INTERNAL_SERVER_ERROR = "An unexpected error occurred. Please try again later.";
     public static final String MSG_VALIDATION_FAILED = "Validation failed for request body";
     public static final String MSG_USER_NOT_FOUND_ID = "Customer not found with ID: ";
+    public static final String MSG_INVALID_DATE_RANGE = "fromDate must not be after toDate.";
+    public static final String MSG_INVALID_PARAMETER = "Invalid value for parameter: ";
 
     // Dispute Resolution Response Messages
     public static final String MSG_DISPUTE_AUTO_APPROVED = "Dispute evaluated by decision matrix: AUTO-APPROVED. Funds credited to your account.";
     public static final String MSG_DISPUTE_QUEUED_AGENT = "Dispute evaluated by decision matrix: Queued for back-office agent review.";
     public static final String MSG_DISPUTE_SUBMITTED = "Dispute submitted successfully.";
+
+    // Dispute Business Rules
+    public static final int DISPUTE_WINDOW_DAYS = 60;
+    public static final String DISPUTE_TIMEZONE = "Africa/Johannesburg";
+    public static final String MSG_DISPUTE_WINDOW_CLOSED = "This transaction can no longer be disputed. The 60-day dispute window has closed.";
+    public static final String MSG_CATEGORY_NOT_DISPUTABLE = "This transaction category is not eligible for dispute.";
 }
 

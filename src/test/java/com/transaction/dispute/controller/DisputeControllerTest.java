@@ -1,7 +1,9 @@
 package com.transaction.dispute.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.transaction.dispute.common.AppConstants;
 import com.transaction.dispute.config.TestSqsConfig;
+import com.transaction.dispute.exception.ForbiddenException;
 import com.transaction.dispute.model.dto.AuthResponseDto;
 import com.transaction.dispute.model.dto.DisputeRequestDto;
 import com.transaction.dispute.model.dto.DisputeResponseDto;
@@ -125,6 +127,30 @@ class DisputeControllerTest {
     void getDisputeHistory_ShouldReturn403_WhenNoTokenProvided() throws Exception {
         mockMvc.perform(get("/api/v1/disputes"))
                 .andExpect(status().isForbidden());
+    }
+
+    // Web-layer verification (Property 1): a ForbiddenException raised by the service for an
+    // ownership violation (customer B disputing customer A's transaction) is mapped by
+    // GlobalExceptionHandler to HTTP 403 with a structured ErrorResponseDto payload.
+    // **Validates: Requirements 2.1, 2.2**
+    @Test
+    @DisplayName("POST /api/v1/disputes should return 403 with structured error when disputing another customer's transaction")
+    void submitDispute_ShouldReturn403_WhenTransactionNotOwned() throws Exception {
+        when(disputeService.submitDispute(anyLong(), any(DisputeRequestDto.class)))
+                .thenThrow(new ForbiddenException(AppConstants.MSG_UNAUTHORIZED_TRANSACTION_ACCESS));
+
+        DisputeRequestDto request = TestPayloadFactory.createDisputeRequest(5000102L);
+        String token = obtainBearerToken();
+
+        mockMvc.perform(post("/api/v1/disputes")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.message").value(AppConstants.MSG_UNAUTHORIZED_TRANSACTION_ACCESS))
+                .andExpect(jsonPath("$.path").exists());
     }
 }
 

@@ -18,6 +18,9 @@ spring:
 
   flyway:
     enabled: true
+    # Local/docker loads BOTH the schema migrations and the local-only seed data.
+    # Production uses only the default classpath:db/migration (no seed).
+    locations: classpath:db/migration,classpath:db/seed
 
 aws:
   region: ${AWS_REGION:af-south-1}

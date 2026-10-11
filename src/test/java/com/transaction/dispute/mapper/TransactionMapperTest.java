@@ -4,6 +4,7 @@ import com.transaction.dispute.model.dto.TransactionResponseDto;
 import com.transaction.dispute.model.entity.AccountEntity;
 import com.transaction.dispute.model.entity.TransactionEntity;
 import com.transaction.dispute.model.entity.UserEntity;
+import com.transaction.dispute.model.enums.TransactionCategory;
 import com.transaction.dispute.util.TestPayloadFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -70,5 +71,43 @@ class TransactionMapperTest {
     @DisplayName("Should return null when mapping null TransactionEntity list")
     void toDtoList_ShouldReturnNull_WhenListIsNull() {
         assertThat(transactionMapper.toDtoList(null)).isNull();
+    }
+
+    // Feature: regulatory-dispute-eligibility, Validates Requirements 5.1, 5.2, 5.3.
+    // This test verifies a disputable category maps to disputable() == true
+    @Test
+    @DisplayName("Should map disputable category to disputable=true")
+    void toDto_ShouldSetDisputableTrue_WhenCategoryIsDisputable() {
+        // Given
+        UserEntity user = TestPayloadFactory.createUserEntity();
+        AccountEntity account = TestPayloadFactory.createAccountEntity(user);
+        TransactionEntity entity = TestPayloadFactory.createTransactionEntity(account);
+        entity.setCategory(TransactionCategory.LOAN);
+
+        // When
+        TransactionResponseDto dto = transactionMapper.toDto(entity);
+
+        // Then
+        assertThat(dto).isNotNull();
+        assertThat(dto.disputable()).isTrue();
+    }
+
+    // Feature: regulatory-dispute-eligibility, Validates Requirements 5.1, 5.2, 5.3.
+    // This test verifies a non-disputable category maps to disputable() == false
+    @Test
+    @DisplayName("Should map non-disputable category to disputable=false")
+    void toDto_ShouldSetDisputableFalse_WhenCategoryIsNotDisputable() {
+        // Given
+        UserEntity user = TestPayloadFactory.createUserEntity();
+        AccountEntity account = TestPayloadFactory.createAccountEntity(user);
+        TransactionEntity entity = TestPayloadFactory.createTransactionEntity(account);
+        entity.setCategory(TransactionCategory.P2P_TRANSFER);
+
+        // When
+        TransactionResponseDto dto = transactionMapper.toDto(entity);
+
+        // Then
+        assertThat(dto).isNotNull();
+        assertThat(dto.disputable()).isFalse();
     }
 }

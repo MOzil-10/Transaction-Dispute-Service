@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -42,6 +43,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponseDto> handleForbidden(ForbiddenException ex, HttpServletRequest request) {
+        log.error("Forbidden access [{}]: {}", request.getRequestURI(), ex.getMessage());
+        var error = new ErrorResponseDto(
+                HttpStatus.FORBIDDEN.value(),
+                HttpStatus.FORBIDDEN.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
     @ExceptionHandler({UnauthorizedException.class, BadCredentialsException.class})
     public ResponseEntity<ErrorResponseDto> handleUnauthorized(Exception ex, HttpServletRequest request) {
         log.error("Unauthorized access [{}]: {}", request.getRequestURI(), ex.getMessage());
@@ -61,7 +74,7 @@ public class GlobalExceptionHandler {
                 .map(err -> new ErrorResponseDto.FieldErrorDto(err.getField(), err.getDefaultMessage()))
                 .toList();
 
-        log.error("Validation failed [{}] â€” {} field error(s): {}", request.getRequestURI(), fieldErrors.size(), fieldErrors);
+        log.error("Validation failed [{}] Ã¢â‚¬â€ {} field error(s): {}", request.getRequestURI(), fieldErrors.size(), fieldErrors);
         var error = new ErrorResponseDto(
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
@@ -72,6 +85,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponseDto> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        log.error("Type mismatch for parameter [{}] on [{}]: {}", ex.getName(), request.getRequestURI(), ex.getMessage());
+        var error = new ErrorResponseDto(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                AppConstants.MSG_INVALID_PARAMETER + ex.getName(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDto> handleGenericException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception [{}]: {}", request.getRequestURI(), ex.getMessage(), ex);
