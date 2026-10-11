@@ -92,7 +92,7 @@ public final class TestPayloadFactory {
         return new TransactionResponseDto(
                 5000102L, "TXN-90812", "FITNESS_CLUB_ZA",
                 new BigDecimal("450.00"), "ZAR",
-                MandateType.STANDARD_EFT, TransactionStatus.COMPLETED,
+                MandateType.STANDARD_EFT, TransactionCategory.GYM_MEMBERSHIP, TransactionStatus.COMPLETED,
                 OffsetDateTime.now(), true
         );
     }
