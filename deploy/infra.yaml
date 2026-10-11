@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  DisputeX demo infrastructure (single-host). Creates an SQS FIFO queue, a CloudWatch
+  log group, an IAM instance role scoped to send-to-queue + write-logs, a locked-down
+  security group, and a t3.small EC2 instance with an Elastic IP. Docker + the app are
+  installed/run by you on the instance after the stack is created (see deploy/README.md).
+
+Parameters:
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an EXISTING EC2 key pair (create/download it in the console first) for SSH.
+
+  SshAllowedCidr:
+    Type: String
+    Description: Your public IP in CIDR form, e.g. 102.68.1.23/32. SSH (22) is open ONLY to this.
+    AllowedPattern: ^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$
+    ConstraintDescription: Must be a CIDR like 1.2.3.4/32.
+
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues: [t3.small, t3.medium]
+    Description: EC2 size. t3.small is enough for the demo (JVM + Postgres + nginx + Caddy).
+
+  LogRetentionDays:
+    Type: Number
+    Default: 7
+    Description: How many days to keep CloudWatch logs before auto-deletion.
+
+  LatestAl2023Ami:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: >
+      Resolves automatically to the latest Amazon Linux 2023 x86_64 AMI for the region you
+      deploy in. Do not change unless you have a specific AMI requirement.
+
+
+Resources:
+
+  DisputeQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: dispute-events.fifo
+      FifoQueue: true
+      ContentBasedDeduplication: false
+      MessageRetentionPeriod: 1209600   # 14 days (seconds) - survive the demo with no consumer
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: disputex
+      RetentionInDays: !Ref LogRetentionDays
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: disputex-ec2-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: disputex-send-and-log
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # Producer-only: send to the one queue, no receive/delete.
+              - Sid: SqsSendOnly
+                Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:GetQueueUrl
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt DisputeQueue.Arn
+              # Ship container logs to the one log group.
+              - Sid: CloudWatchLogsWrite
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:CreateLogGroup
+                  - logs:DescribeLogStreams
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:disputex:*"
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [ !Ref InstanceRole ]
+
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: DisputeX demo - HTTP/HTTPS public, SSH from your IP only.
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 80,  ToPort: 80,  CidrIp: 0.0.0.0/0, Description: HTTP (ACME + redirect) }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0, Description: HTTPS }
+        - { IpProtocol: tcp, FromPort: 22,  ToPort: 22,  CidrIp: !Ref SshAllowedCidr, Description: SSH (your IP only) }
+
+  WebInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPairName
+      ImageId: !Ref LatestAl2023Ami
+      IamInstanceProfile: !Ref InstanceProfile
+      SecurityGroupIds: [ !Ref WebSecurityGroup ]
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs: { VolumeSize: 20, VolumeType: gp3, DeleteOnTermination: true }
+      Tags:
+        - { Key: Name, Value: disputex-demo }
+
+  WebEip:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref WebInstance
+      Tags:
+        - { Key: Name, Value: disputex-demo }
+
+Outputs:
+  PublicIp:
+    Description: Elastic IP - point your domain's A record here, and SSH to it.
+    Value: !Ref WebEip
+  QueueUrl:
+    Description: Put this in deploy/.env as AWS_SQS_DISPUTE_QUEUE_URL.
+    Value: !Ref DisputeQueue
+  QueueArn:
+    Description: The queue ARN (for reference).
+    Value: !GetAtt DisputeQueue.Arn
+  LogGroupName:
+    Description: CloudWatch log group to watch while reviewers test.
+    Value: !Ref LogGroup
+  Region:
+    Description: Put this in deploy/.env as AWS_REGION.
+    Value: !Ref "AWS::Region"

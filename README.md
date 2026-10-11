@@ -217,6 +217,23 @@ Customer submits dispute
 
 ---
 
+## AWS Deployment (optional demo)
+
+A cost-conscious temporary deployment is documented in [`deploy/README.md`](deploy/README.md):
+a single EC2 `t3.small` running this Docker Compose stack behind Caddy (automatic HTTPS),
+with dispute events published to a **real Amazon SQS FIFO queue** in `af-south-1`.
+
+- **Local vs AWS SQS:** local development uses the LocalStack emulator (no AWS account needed).
+  The deployment override (`deploy/docker-compose.prod.yml`) disables LocalStack and points the
+  app at a real SQS queue; AWS credentials come from an **EC2 instance role** (no static keys on
+  the host), scoped to `sqs:SendMessage` on the one queue.
+- **Producer only:** the app publishes to the queue and stores the returned SQS message id on the
+  dispute. There is intentionally **no consumer** (the back-office agent service that would read
+  the queue and assign disputes to agents is out of scope). Messages therefore accumulate in the
+  queue - visible in the SQS console - which demonstrates the producer path end to end.
+- The app runs locally with **no AWS credentials**; only the AWS deployment path touches real SQS.
+
+---
 ## Security Considerations
 
 - **JWT signing key is required, never defaulted.** The app reads `application.security.jwt.secret-key`
@@ -243,10 +260,8 @@ Customer submits dispute
 
 ### Known limitations
 
-- **AWS SQS** publishing is best-effort and non-fatal: if the queue is unreachable the dispute is
-  still persisted and the customer still gets a response. There is no transactional outbox, so under
-  a crash between DB commit and publish an event can be missed - acceptable for this assessment, and
-  the consumer side would need to be idempotent (SQS gives at-least-once delivery, not exactly-once).
+- **AWS SQS - producer only.** The app publishes dispute events to the queue and stores the SQS message id for audit; it does **not** consume them. The back-office agent service that would read the queue and assign disputes to agents is intentionally out of scope. A production system would add that consumer (idempotent, since SQS is at-least-once not exactly-once) plus a dead-letter queue and redrive.
+- **No transactional outbox.** Publishing is best-effort and non-fatal: if the queue is unreachable the dispute is still persisted and the customer still gets a response, but under a crash between the DB commit and the publish a single event could be missed. Acceptable for this assessment; an outbox would close that gap.
 - **Risk weights and the decision threshold are illustrative defaults**, not a validated fraud model.
   With the current weights, STANDARD_EFT disputes always route to manual review.
 - **No rate limiting** on the authentication endpoints yet.

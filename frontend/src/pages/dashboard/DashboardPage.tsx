@@ -178,18 +178,20 @@ export function DashboardPage() {
             {activeDisputes.map((d) => {
               const meta = DISPUTE_STATUS_META[d.status];
               return (
-                <li key={d.disputeId} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-slate-900">{DISPUTE_REASON_LABELS[d.reason]}</p>
-                    <p className="text-xs text-slate-500">
+                <li key={d.disputeId} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="break-words font-semibold text-slate-900">{DISPUTE_REASON_LABELS[d.reason]}</p>
+                    <p className="break-words text-xs text-slate-500">
                       {d.disputeReference} &middot; Opened {formatDate(d.createdAt)}
                     </p>
                   </div>
-                  <span className="font-semibold text-slate-900">{formatZar(d.amount)}</span>
-                  <Badge tone={meta.tone}>{meta.label}</Badge>
-                  <Link to="/disputes" className="text-sm font-semibold text-blue-700 hover:text-blue-800">
-                    View case &rarr;
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:flex-none sm:justify-end">
+                    <span className="font-semibold text-slate-900">{formatZar(d.amount)}</span>
+                    <Badge tone={meta.tone}>{meta.label}</Badge>
+                    <Link to="/disputes" className="text-sm font-semibold text-blue-700 hover:text-blue-800">
+                      View case &rarr;
+                    </Link>
+                  </div>
                 </li>
               );
             })}

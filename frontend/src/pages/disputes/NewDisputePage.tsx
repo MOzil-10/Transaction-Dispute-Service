@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { transactionService } from "@/services/transactionService";
 import { disputeService } from "@/services/disputeService";
+import { useAccount } from "@/context/AccountContext";
 import { ApiError } from "@/services/apiError";
 import { formatSignedZar, formatZar, formatDate, daysSince } from "@/lib/format";
 import { DISPUTE_REASON_OPTIONS, DISPUTE_WINDOW_DAYS, DECISION_ROUTE_META, DISPUTE_STATUS_META } from "@/lib/constants";
@@ -21,6 +22,7 @@ export function NewDisputePage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const transactionId = Number(params.get("transactionId"));
+  const { reload: reloadAccount } = useAccount();
 
   const [txn, setTxn] = useState<TransactionResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +69,9 @@ export function NewDisputePage() {
       const res = await disputeService.submit({ transactionId: txn.transactionId, reason, description: description || null });
       setResult(res);
       setStep(3);
+      // An auto-approved dispute credits the refund to the account immediately on the backend,
+      // so refresh the shared account overview to show the new balance without a re-login.
+      void reloadAccount();
     } catch (e) {
       // Backend is the source of truth for the 60-day rule and eligibility.
       setSubmitError(e instanceof ApiError ? e.message : "Could not submit your dispute. Please try again.");

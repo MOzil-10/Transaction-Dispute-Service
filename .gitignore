@@ -34,3 +34,8 @@ build/
 
 ### jqwik ###
 .jqwik-database
+
+### Deployment secrets (never commit real values) ###
+deploy/.env
+.env
+*.pem

@@ -27,10 +27,11 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
 
-    // Allowed browser origins for CORS, externalised so prod/local differ without code changes.
-    // Defaults to the local Vite dev server and the dockerised frontend; override via
-    // CORS_ALLOWED_ORIGINS (comma-separated) in other environments.
-    @Value("${application.security.cors.allowed-origins:http://localhost:5173,http://localhost:3000}")
+    // Allowed browser origin PATTERNS (wildcards supported). The default permits any localhost/
+    // 127.0.0.1 port so the Vite dev server works regardless of which port it binds (5173/5174/...).
+    // Override with CORS_ALLOWED_ORIGINS (comma-separated) in deployed environments, e.g.
+    // https://your-domain - a single exact origin.
+    @Value("${application.security.cors.allowed-origins:http://localhost:*,http://127.0.0.1:*}")
     private List<String> allowedOrigins;
 
     @Bean
@@ -58,7 +59,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(allowedOrigins);
+        config.setAllowedOriginPatterns(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setExposedHeaders(List.of("Authorization"));

@@ -1,0 +1,104 @@
+# Production/demo override for a single EC2 host (real AWS SQS + CloudWatch logs).
+#
+# Usage (from the repo root, on the EC2 instance):
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build
+#
+# Differences from the base docker-compose.yml:
+#   * Adds Caddy as the ONLY internet-facing service (80/443, TLS via Let's Encrypt).
+#   * Removes the published host ports from postgres, app and frontend, so only Caddy
+#     is reachable from the public internet.
+#   * DISABLES the local LocalStack SQS emulator and points the app at a REAL Amazon
+#     SQS FIFO queue. Credentials come from the EC2 INSTANCE ROLE (the default AWS
+#     credential provider chain) - no static AWS keys are placed on the host.
+#   * Ships app / frontend / caddy container logs to Amazon CloudWatch Logs (awslogs
+#     driver) under the log group "disputex" so you can watch activity live while a
+#     reviewer tests. The instance role grants the logs:* permissions; the log group is
+#     created by the CloudFormation stack.
+#   * Supplies the JWT key, DB password, domain and real queue URL from deploy/.env.
+#
+# LocalStack is moved behind the "local-only" profile here, so it does NOT start in the
+# deployed stack. Local development still uses the base docker-compose.yml unchanged (with
+# LocalStack), so the app can run locally with no AWS account.
+#
+# Requires Docker Compose v2.24+ for the `!reset` override tag used below.
+
+services:
+  postgres:
+    ports: []
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+  # Keep LocalStack OUT of the deployed stack. Assigning it to a non-default profile
+  # means `docker compose ... up` (without that profile) will not start it.
+  localstack:
+    profiles: ["local-only"]
+
+  app:
+    ports: []
+    # Clear the inherited localstack dependency (Compose MERGES depends_on, so without
+    # !reset the app would wait forever for a localstack that this stack never starts),
+    # then depend only on Postgres being healthy.
+    depends_on: !reset
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      CORS_ALLOWED_ORIGINS: https://${DOMAIN}
+      DB_URL: jdbc:postgresql://postgres:5432/dispute_db
+      DB_USERNAME: dispute
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_EXPIRATION: "86400000"
+      # Real Amazon SQS. Region + queue URL from deploy/.env. NO static keys and NO
+      # endpoint override: the AWS SDK resolves credentials from the EC2 instance role.
+      AWS_REGION: ${AWS_REGION}
+      AWS_SQS_DISPUTE_QUEUE_URL: ${AWS_SQS_DISPUTE_QUEUE_URL}
+      # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY: deliberately unset (instance role).
+      # AWS_SQS_ENDPOINT_OVERRIDE: deliberately unset (hit real AWS, not LocalStack).
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: disputex
+        awslogs-create-group: "true"
+        awslogs-stream: app
+
+  frontend:
+    ports: []
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: disputex
+        awslogs-create-group: "true"
+        awslogs-stream: frontend
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: dispute-caddy
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: disputex
+        awslogs-create-group: "true"
+        awslogs-stream: caddy
+
+volumes:
+  caddy-data:
+  caddy-config:

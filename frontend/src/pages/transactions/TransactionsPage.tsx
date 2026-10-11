@@ -118,33 +118,39 @@ export function TransactionsPage() {
         </div>
 
         {/* Filter bar */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-4">
-          <div className="relative min-w-[220px] flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search merchant or reference"
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
-            />
+        <div className="border-b border-slate-100 px-5 py-4">
+          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="relative sm:col-span-2 lg:col-span-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search merchant or reference"
+                aria-label="Search merchant or reference"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
+              />
+            </div>
+            <select
+              value={mandate}
+              onChange={(e) => { setMandate(e.target.value as MandateType | ""); setPageIdx(0); }}
+              aria-label="Mandate type"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
+            >
+              {MANDATE_FILTERS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+            <input type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPageIdx(0); }} aria-label="From date"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30" />
+            <input type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPageIdx(0); }} aria-label="To date"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30" />
           </div>
-          <select
-            value={mandate}
-            onChange={(e) => { setMandate(e.target.value as MandateType | ""); setPageIdx(0); }}
-            className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
-          >
-            {MANDATE_FILTERS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-          </select>
-          <input type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPageIdx(0); }} aria-label="From date"
-            className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30" />
-          <input type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPageIdx(0); }} aria-label="To date"
-            className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30" />
-          {activeFilterCount > 0 && (
-            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/20">
-              {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} applied
-            </span>
-          )}
-          <button onClick={reset} className="text-sm font-semibold text-blue-700 hover:text-blue-800">Reset</button>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/20">
+                {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} applied
+              </span>
+            )}
+            <button onClick={reset} className="ml-auto text-sm font-semibold text-blue-700 hover:text-blue-800">Reset</button>
+          </div>
         </div>
 
         {/* Table / states */}
@@ -189,14 +195,14 @@ export function TransactionsPage() {
               {rows.map((t) => (
                 <li key={t.transactionId} className="px-5 py-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-900">{t.merchant}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words font-semibold text-slate-900">{t.merchant}</p>
                       <p className="text-xs text-slate-500">{TRANSACTION_CATEGORY_LABELS[t.category]}</p>
-                      <p className="text-xs text-slate-400">{formatDate(t.transactionDate)} &middot; <span className="font-mono">{t.reference}</span></p>
+                      <p className="break-words text-xs text-slate-400">{formatDate(t.transactionDate)} &middot; <span className="font-mono">{t.reference}</span></p>
                     </div>
                     <p className="whitespace-nowrap font-semibold text-slate-900">{formatSignedZar(t.amount)}</p>
                   </div>
-                  <div className="mt-3 flex items-center justify-between">
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                     <Badge tone="slate">{t.mandateType}</Badge>
                     {renderAction(t, disputeByTxn.get(t.transactionId), () => navigate(`/disputes/new?transactionId=${t.transactionId}`))}
                   </div>
@@ -245,19 +251,19 @@ function renderAction(
   existing: DisputeResponse | undefined,
   onDispute: () => void,
 ) {
-  if (existing) {
+if (existing) {
     const meta = DISPUTE_STATUS_META[existing.status];
     return (
-      <span className="inline-flex items-center gap-2">
+      <span className="inline-flex flex-wrap items-center justify-end gap-2">
         <Badge tone={meta.tone}>{meta.label}</Badge>
-        <Button size="sm" variant="secondary" disabled title={`Dispute ${existing.disputeReference} already lodged`}>
+        <Button size="sm" variant="secondary" disabled className="min-h-[38px]" title={`Dispute ${existing.disputeReference} already lodged`}>
           Disputed
         </Button>
       </span>
     );
   }
   if (t.disputable) {
-    return <Button size="sm" onClick={onDispute}>Dispute</Button>;
+    return <Button size="sm" className="min-h-[38px] px-4" onClick={onDispute}>Dispute</Button>;
   }
   const meta = TRANSACTION_STATUS_META[t.status];
   return <Badge tone={meta.tone}>{meta.label}</Badge>;

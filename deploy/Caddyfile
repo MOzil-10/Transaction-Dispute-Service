@@ -1,0 +1,35 @@
+# Caddy reverse proxy for the DisputeX demo.
+#
+# Caddy is the ONLY public entrypoint. It terminates TLS (auto Let's Encrypt
+# certificate for {$DOMAIN}) and routes:
+#   - API + API docs            -> the backend "app" service (:8087)
+#   - everything else (the SPA) -> the "frontend" nginx service (:80)
+#
+# {$DOMAIN} is supplied from the environment (see deploy/.env.example).
+# For a quick test without a domain you can replace {$DOMAIN} with the literal
+# EC2 public IP and Caddy will serve self-signed TLS (browser warning), but a
+# real domain + Let's Encrypt is strongly recommended for the submission.
+
+{$DOMAIN} {
+    encode gzip
+
+    # Backend API and OpenAPI docs
+    @api path /api/* /v3/api-docs* /swagger-ui* /swagger-ui.html
+    handle @api {
+        reverse_proxy app:8087
+    }
+
+    # Single-page app (static assets + client-side routes)
+    handle {
+        reverse_proxy frontend:80
+    }
+
+    # Security headers appropriate for a public demo
+    header {
+        Strict-Transport-Security "max-age=31536000;"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        -Server
+    }
+}
