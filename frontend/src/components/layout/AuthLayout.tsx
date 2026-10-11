@@ -52,7 +52,7 @@ export function AuthLayout({ children, topRight, eyebrow, headline, blurb, highl
           <div className="w-full max-w-md py-10">{children}</div>
         </div>
         <footer className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-slate-400">
-          <span>&copy; 2026 Aster Bank</span>
+          <span>&copy; 2026 DisputeX</span>
           <a href="#" className="hover:text-slate-600">Privacy</a>
           <a href="#" className="hover:text-slate-600">Terms</a>
           <a href="#" className="font-medium text-blue-700 hover:text-blue-800">Contact support</a>

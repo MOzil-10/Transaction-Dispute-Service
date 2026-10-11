@@ -41,7 +41,7 @@ export function LoginPage() {
       ]}
       topRight={
         <span>
-          New to Aster Bank?{" "}
+          New to DisputeX?{" "}
           <Link to="/auth/register" className="font-semibold text-blue-700 hover:text-blue-800">
             Create an account
           </Link>
