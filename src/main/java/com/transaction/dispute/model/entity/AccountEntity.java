@@ -39,6 +39,13 @@ public class AccountEntity {
     @Column(nullable = false, length = 3)
     private String currency;
 
+    // Optimistic lock: guards the balance against lost updates when two refunds credit the same
+    // account concurrently. Hibernate increments this on each flush and fails a stale write with
+    // OptimisticLockException instead of silently overwriting.
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

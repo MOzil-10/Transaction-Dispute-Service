@@ -1,0 +1,64 @@
+@startuml
+title Search Transactions
+autonumber
+skinparam Style strictuml
+skinparam SequenceMessageAlignment center
+skinparam boxPadding 10
+
+box "User" #E6F0FA
+actor "Customer" as Customer
+end box
+
+box "Client" #E6F9E6
+participant "DisputeX Web App" as Frontend
+end box
+
+box "DisputeX Backend" #FFF9E6
+participant "Auth Filter" as Filter
+participant "DisputeX API" as Api
+participant "Transaction Service" as Service
+end box
+
+box "Data" #F2E6FF
+database "Account Store" as AccountDB
+database "Transaction Store" as TxnDB
+end box
+
+Customer -> Frontend: Apply filters\n(mandate type and/or date range)
+Frontend -> Filter: Request filtered transactions\n(with access token)
+
+Filter -> Filter: Verify access token
+alt #LightPink Token invalid or expired
+    Filter --> Frontend: Session expired
+    Frontend --> Customer: Redirect to login
+else #LightGreen Token valid
+    Filter -> Api: Forward authenticated request
+    Api -> Service: Search transactions for customer\n(mandate type, from date, to date, page, size)
+
+    alt #LightPink Invalid date range (from date after to date)
+        Service --> Api: Invalid date range
+        Api --> Frontend: Bad request error
+        Frontend --> Customer: Show validation message
+    else #LightGreen Filters valid
+        Service -> AccountDB: Find customer's account
+        AccountDB --> Service: Account
+
+        alt #LightPink Account not found
+            Service --> Api: Account not found
+            Api --> Frontend: Not found error
+            Frontend --> Customer: Show error message
+        else #LightGreen Account found
+            Service -> TxnDB: Fetch transactions matching filters\n(most recent first, paginated)
+            note right of Service
+              Any omitted filter is ignored.
+              With no filters this returns the
+              full transaction history.
+            end note
+            TxnDB --> Service: Page of transactions
+            Service --> Api: Filtered transaction page
+            Api --> Frontend: Transactions returned
+            Frontend --> Customer: Display matching transactions
+        end
+    end
+end
+@enduml

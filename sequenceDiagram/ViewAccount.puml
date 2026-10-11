@@ -1,0 +1,50 @@
+@startuml
+title View Account Overview
+autonumber
+skinparam Style strictuml
+skinparam SequenceMessageAlignment center
+skinparam boxPadding 10
+
+box "User" #E6F0FA
+actor "Customer" as Customer
+end box
+
+box "Client" #E6F9E6
+participant "DisputeX Web App" as Frontend
+end box
+
+box "DisputeX Backend" #FFF9E6
+participant "Auth Filter" as Filter
+participant "DisputeX API" as Api
+participant "Account Service" as Service
+end box
+
+box "Data" #F2E6FF
+database "Account Store" as AccountDB
+end box
+
+Customer -> Frontend: Open account / dashboard
+Frontend -> Filter: Request account overview\n(with access token)
+
+Filter -> Filter: Verify access token
+alt #LightPink Token invalid or expired
+    Filter --> Frontend: Session expired
+    Frontend --> Customer: Redirect to login
+else #LightGreen Token valid
+    Filter -> Api: Forward authenticated request
+    Api -> Service: Get account overview for customer
+
+    Service -> AccountDB: Find customer's account\n(with owner profile)
+    AccountDB --> Service: Account and customer details
+
+    alt #LightPink Account not found
+        Service --> Api: Account not found
+        Api --> Frontend: Not found error
+        Frontend --> Customer: Show error message
+    else #LightGreen Account found
+        Service --> Api: Account overview\n(name, email, account number, account type, live balance, currency)
+        Api --> Frontend: Account overview returned
+        Frontend --> Customer: Display account details and live balance
+    end
+end
+@enduml

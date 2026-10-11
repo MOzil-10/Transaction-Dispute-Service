@@ -1,63 +1,53 @@
 @startuml
+title View Transactions
 autonumber
 skinparam Style strictuml
 skinparam SequenceMessageAlignment center
 skinparam boxPadding 10
 
-box "User Layer" #E6F0FA
-actor "Customer\n(Rita)" as Customer
+box "User" #E6F0FA
+actor "Customer" as Customer
 end box
 
-box "Frontend Layer" #E6F9E6
-participant "Angular Frontend\n(Web App)" as Frontend
+box "Client" #E6F9E6
+participant "DisputeX Web App" as Frontend
 end box
 
-box "Security & API Layer" #FFF9E6
-participant "JwtAuthenticationFilter" as Filter
-participant "TransactionController" as Controller
-participant "JwtService" as JWT
-participant "TransactionService" as Service
-participant "AccountRepository" as AccountRepo
-participant "TransactionRepository" as TxnRepo
+box "DisputeX Backend" #FFF9E6
+participant "Auth Filter" as Filter
+participant "DisputeX API" as Api
+participant "Transaction Service" as Service
 end box
 
-box "Database Layer" #F2E6FF
-database "PostgreSQL\n(Database)" as DB
+box "Data" #F2E6FF
+database "Account Store" as AccountDB
+database "Transaction Store" as TxnDB
 end box
 
-Customer -> Frontend: View transactions
-Frontend -> Filter: GET /api/v1/transactions?page=0&size=10\n(Authorization: Bearer <JWT>)
+Customer -> Frontend: Open transactions
+Frontend -> Filter: Request transaction history\n(with access token)
 
-Filter -> JWT: extractEmail(jwt) + isTokenValid(jwt, userDetails)
-alt #LightPink Token Invalid / Expired
-    JWT --> Filter: invalid
-    Filter --> Frontend: <font color=red><b>401 Unauthorized</b></font>
-    Frontend --> Customer: Redirect to login screen
-else #LightGreen Token Valid
-    JWT --> Filter: valid (SecurityContext populated)
-    Filter -> Controller: forward authenticated request
+Filter -> Filter: Verify access token
+alt #LightPink Token invalid or expired
+    Filter --> Frontend: Session expired
+    Frontend --> Customer: Redirect to login
+else #LightGreen Token valid
+    Filter -> Api: Forward authenticated request
+    Api -> Service: Get transactions for customer\n(page, size)
 
-    Controller -> JWT: extractCustomerId(token)
-    JWT --> Controller: customerId
-    Controller -> Service: getTransactionPage(customerId, pageable)
+    Service -> AccountDB: Find customer's account
+    AccountDB --> Service: Account
 
-    Service -> AccountRepo: findByUserCustomerId(customerId)
-    AccountRepo -> DB: SELECT ... FROM accounts WHERE customer_id = ?
-    DB --> AccountRepo: AccountEntity
-    AccountRepo --> Service: AccountEntity
-
-    alt #LightPink Account Not Found
-        Service --> Controller: throw ResourceNotFoundException\n(MSG_ACCOUNT_NOT_FOUND)
-        Controller --> Frontend: <font color=red><b>404 Not Found</b> (ErrorResponseDto)</font>
+    alt #LightPink Account not found
+        Service --> Api: Account not found
+        Api --> Frontend: Not found error
         Frontend --> Customer: Show error message
-    else #LightGreen Account Found
-        Service -> TxnRepo: findByAccountUserCustomerId(customerId, pageable)
-        TxnRepo -> DB: SELECT ... FROM transactions ORDER BY transaction_date DESC
-        DB --> TxnRepo: Page<TransactionEntity>
-        TxnRepo --> Service: Page<TransactionEntity>
-        Service --> Controller: Page<TransactionResponseDto>\n(mapped via TransactionMapper)
-        Controller --> Frontend: <font color=green><b>200 OK</b> (Paginated transactions)</font>
-        Frontend --> Customer: Display transactions on dashboard
+    else #LightGreen Account found
+        Service -> TxnDB: Fetch transactions\n(most recent first, paginated)
+        TxnDB --> Service: Page of transactions
+        Service --> Api: Transaction page\n(amount, merchant, category, mandate type, disputable)
+        Api --> Frontend: Transactions returned
+        Frontend --> Customer: Display transactions
     end
 end
 @enduml

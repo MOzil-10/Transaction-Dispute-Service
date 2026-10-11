@@ -16,15 +16,10 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
 
     Page<TransactionEntity> findByAccountUserCustomerId(Long customerId, Pageable pageable);
 
-    /**
-     * Returns the given customer's transactions, optionally filtered by mandate type and/or an
-     * inclusive transaction-date range. Any filter left null is ignored, so passing all nulls
-     * returns every transaction for the customer.
-     */
     @Query("select t from TransactionEntity t where t.account.user.customerId = :customerId " +
-            "and (:mandateType is null or t.mandateType = :mandateType) " +
-            "and (:from is null or t.transactionDate >= :from) " +
-            "and (:to is null or t.transactionDate <= :to)")
+            "and (cast(:mandateType as string) is null or t.mandateType = :mandateType) " +
+            "and (cast(:from as timestamp) is null or t.transactionDate >= :from) " +
+            "and (cast(:to as timestamp) is null or t.transactionDate <= :to)")
     Page<TransactionEntity> search(@Param("customerId") Long customerId,
                                    @Param("mandateType") MandateType mandateType,
                                    @Param("from") OffsetDateTime from,

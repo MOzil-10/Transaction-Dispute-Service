@@ -1,5 +1,5 @@
-const TOKEN_KEY = "aster.auth.token";
-const USER_KEY = "aster.auth.user";
+const TOKEN_KEY = "disputex.auth.token";
+const USER_KEY = "disputex.auth.user";
 
 export interface StoredUser {
   customerId: number;

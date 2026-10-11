@@ -3,6 +3,7 @@ package com.transaction.dispute.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,11 +17,24 @@ import java.util.Date;
 @Slf4j
 public class JwtService {
 
-    @Value("${application.security.jwt.secret-key:404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971}")
+    // No in-code default: the signing key MUST be supplied via configuration/environment so a
+    // committed key can never be used to sign tokens. Startup fails fast if it is absent.
+    @Value("${application.security.jwt.secret-key}")
     private String secretKey;
 
     @Value("${application.security.jwt.expiration:86400000}")
     private long jwtExpiration;
+
+    // HMAC-SHA256 requires a key of at least 256 bits (32 bytes). Validate at startup so a
+    // missing or too-weak key fails fast with a clear message rather than at first token use.
+    @PostConstruct
+    void validateSecretKey() {
+        if (secretKey == null || secretKey.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "application.security.jwt.secret-key must be configured and at least 32 bytes (256 bits). " +
+                    "Set the JWT_SECRET_KEY environment variable.");
+        }
+    }
 
     private SecretKey getSigningKey() {
         byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);

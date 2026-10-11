@@ -74,7 +74,7 @@ public class GlobalExceptionHandler {
                 .map(err -> new ErrorResponseDto.FieldErrorDto(err.getField(), err.getDefaultMessage()))
                 .toList();
 
-        log.error("Validation failed [{}] Ã¢â‚¬â€ {} field error(s): {}", request.getRequestURI(), fieldErrors.size(), fieldErrors);
+        log.error("Validation failed [{}] - {} field error(s): {}", request.getRequestURI(), fieldErrors.size(), fieldErrors);
         var error = new ErrorResponseDto(
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),

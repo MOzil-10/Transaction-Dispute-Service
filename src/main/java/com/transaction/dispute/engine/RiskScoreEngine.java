@@ -19,6 +19,14 @@ import org.springframework.stereotype.Component;
  *  - INCORRECT_DATE:           + 5 additional
  *
  * Score is capped at 100.
+ *
+ * Rationale: DEBICHECK is a pre-authorised mandate the customer approved up front, so it
+ * carries lower fraud risk (base 30) than an unauthenticated STANDARD_EFT debit (base 50).
+ * Combined with the decision threshold of 50, this is a deliberate, conservative policy:
+ * DEBICHECK disputes with a low-severity reason can auto-approve, while every STANDARD_EFT
+ * dispute (base 50 + any reason >= 5) exceeds the threshold and is routed to a human agent.
+ * The weights are illustrative defaults for this assessment; in production they would be
+ * tuned against historical dispute outcomes and signed off by the risk/fraud team.
  */
 @Component
 @Slf4j

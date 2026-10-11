@@ -1,0 +1,19 @@
+# Base configuration shared across all profiles.
+# When no profile is supplied, fall back to "local" so the application
+# starts with a working configuration (e.g. `java -jar app.jar` or
+# `mvn spring-boot:run` without an explicit --spring.profiles.active).
+spring:
+  profiles:
+    default: local
+
+# Expose ONLY the health endpoint over HTTP so sensitive Actuator endpoints
+# (env, beans, configprops, heapdump, etc.) can never be reached, even though
+# /actuator/** is permitted for container health checks.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
