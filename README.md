@@ -213,3 +213,43 @@ Customer submits dispute
     ├── security/              JwtService, JwtAuthenticationFilter
     └── service/               Auth, Account, Transaction, Dispute, SqsPublisher
 ```
+
+
+---
+
+## Security Considerations
+
+- **JWT signing key is required, never defaulted.** The app reads `application.security.jwt.secret-key`
+  from configuration/environment (`JWT_SECRET_KEY`) with **no in-code fallback**, and validates at
+  startup that it is at least 32 bytes (256 bits) for HMAC-SHA256. A missing or weak key fails fast.
+  The value in `docker-compose.yml` is a throwaway demo key for local use only; a real deployment
+  supplies it from a secret manager.
+- **Passwords** are hashed with BCrypt; raw passwords and secrets are never logged.
+- **Customer identity** is always derived from the JWT (`customerId` claim), never trusted from the
+  request body or a client-supplied id. Every transaction and dispute lookup enforces ownership;
+  a cross-customer dispute returns `403 Forbidden`.
+- **Duplicate disputes** are prevented at the database level by a `UNIQUE` constraint on
+  `disputes.transaction_id`, so even two concurrent submissions cannot both succeed - not merely an
+  application-code check.
+- **Account balance** carries a JPA `@Version` optimistic lock, so concurrent refund credits to the
+  same account cannot silently overwrite each other.
+- **CORS** is restricted to configured browser origins (`CORS_ALLOWED_ORIGINS`, default: the Vite dev
+  server and the dockerised frontend). It is not open to all origins.
+- **Actuator** exposes only `/actuator/health` over HTTP (with `show-details: never`); sensitive
+  endpoints are not exposed.
+- **Error responses** use a consistent `ErrorResponseDto`; stack traces and SQL errors are never
+  returned to the client.
+- **CSRF** is disabled, which is appropriate for a stateless, token-in-header (not cookie) API.
+
+### Known limitations
+
+- **AWS SQS** publishing is best-effort and non-fatal: if the queue is unreachable the dispute is
+  still persisted and the customer still gets a response. There is no transactional outbox, so under
+  a crash between DB commit and publish an event can be missed - acceptable for this assessment, and
+  the consumer side would need to be idempotent (SQS gives at-least-once delivery, not exactly-once).
+- **Risk weights and the decision threshold are illustrative defaults**, not a validated fraud model.
+  With the current weights, STANDARD_EFT disputes always route to manual review.
+- **No rate limiting** on the authentication endpoints yet.
+- **Test schema** uses H2 (PostgreSQL compatibility mode) with a parallel migration set; it approximates
+  but does not fully reproduce PostgreSQL behaviour. Dialect-specific issues are best caught with a
+  Testcontainers PostgreSQL integration test (not yet added).

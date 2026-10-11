@@ -3,77 +3,88 @@ package com.transaction.dispute.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.transaction.dispute.common.AppConstants;
 import com.transaction.dispute.config.TestSqsConfig;
-import com.transaction.dispute.exception.ForbiddenException;
 import com.transaction.dispute.model.dto.AuthResponseDto;
 import com.transaction.dispute.model.dto.DisputeRequestDto;
-import com.transaction.dispute.model.dto.DisputeResponseDto;
 import com.transaction.dispute.model.dto.RegisterRequestDto;
-import com.transaction.dispute.model.enums.DisputeReason;
+import com.transaction.dispute.model.entity.AccountEntity;
+import com.transaction.dispute.model.entity.TransactionEntity;
+import com.transaction.dispute.repository.AccountRepository;
+import com.transaction.dispute.repository.TransactionRepository;
 import com.transaction.dispute.service.AuthService;
-import com.transaction.dispute.service.DisputeService;
 import com.transaction.dispute.util.TestPayloadFactory;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Web-layer tests for /api/v1/disputes.
+ *
+ * The real DisputeService and repositories are wired against the H2 test database (the service is
+ * NOT mocked), so every request runs the full controller -> service -> repository -> DB path,
+ * including risk scoring, decision routing and the ownership/duplicate guards. Only the external
+ * SqsClient is replaced (TestSqsConfig).
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-@org.springframework.context.annotation.Import(TestSqsConfig.class)
+@Import(TestSqsConfig.class)
 class DisputeControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private AuthService authService;
+    @Autowired private AccountRepository accountRepository;
+    @Autowired private TransactionRepository transactionRepository;
     @Autowired private ObjectMapper objectMapper;
 
-    @MockBean
-    private DisputeService disputeService;
+    private String bearerToken;
+    private AccountEntity account;
 
-    private String obtainBearerToken() {
+    @BeforeEach
+    void setUp() {
         RegisterRequestDto request = TestPayloadFactory.createRegisterRequest();
         AuthResponseDto response = authService.register(request);
-        return "Bearer " + response.token();
+        bearerToken = "Bearer " + response.token();
+        account = accountRepository.findByUserCustomerId(response.customerId()).orElseThrow();
+    }
+
+    private TransactionEntity saveOwnedTransaction() {
+        return transactionRepository.save(
+                TestPayloadFactory.createTransactionEntity(account, "TXN-" + UUID.randomUUID()));
     }
 
     // Verifies POST /api/v1/disputes returns 201 Created with dispute reference and decision outcome
     @Test
     @DisplayName("POST /api/v1/disputes should return 201 with dispute reference on valid request")
     void submitDispute_ShouldReturn201_WhenRequestIsValid() throws Exception {
-        DisputeResponseDto dto = TestPayloadFactory.createDisputeResponseDto();
-        when(disputeService.submitDispute(anyLong(), any(DisputeRequestDto.class))).thenReturn(dto);
-
-        DisputeRequestDto request = TestPayloadFactory.createDisputeRequest(5000102L);
-        String token = obtainBearerToken();
+        TransactionEntity tx = saveOwnedTransaction();
+        DisputeRequestDto request = TestPayloadFactory.createDisputeRequest(tx.getTransactionId());
 
         mockMvc.perform(post("/api/v1/disputes")
-                        .header("Authorization", token)
+                        .header("Authorization", bearerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.disputeReference").value(dto.disputeReference()))
-                .andExpect(jsonPath("$.status").value(dto.status().name()))
-                .andExpect(jsonPath("$.riskScore").value(dto.riskScore()))
-                .andExpect(jsonPath("$.message").value(dto.message()));
+                .andExpect(jsonPath("$.disputeReference").exists())
+                .andExpect(jsonPath("$.transactionId").value(tx.getTransactionId()))
+                .andExpect(jsonPath("$.status").exists())
+                .andExpect(jsonPath("$.riskScore").isNumber())
+                .andExpect(jsonPath("$.message").isNotEmpty());
     }
 
     // Verifies POST /api/v1/disputes returns 400 when required fields are missing
@@ -83,10 +94,9 @@ class DisputeControllerTest {
         String invalidJson = """
                 { "reason": "UNAUTHORISED_MANDATE" }
                 """;
-        String token = obtainBearerToken();
 
         mockMvc.perform(post("/api/v1/disputes")
-                        .header("Authorization", token)
+                        .header("Authorization", bearerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
                 .andExpect(status().isBadRequest());
@@ -96,7 +106,8 @@ class DisputeControllerTest {
     @Test
     @DisplayName("POST /api/v1/disputes should return 403 when no token is provided")
     void submitDispute_ShouldReturn403_WhenNoTokenProvided() throws Exception {
-        DisputeRequestDto request = TestPayloadFactory.createDisputeRequest(5000102L);
+        TransactionEntity tx = saveOwnedTransaction();
+        DisputeRequestDto request = TestPayloadFactory.createDisputeRequest(tx.getTransactionId());
 
         mockMvc.perform(post("/api/v1/disputes")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -104,21 +115,25 @@ class DisputeControllerTest {
                 .andExpect(status().isForbidden());
     }
 
-    // Verifies GET /api/v1/disputes returns 200 with paginated dispute history for authenticated customer
+    // Verifies GET /api/v1/disputes returns 200 with the customer's real dispute history
     @Test
     @DisplayName("GET /api/v1/disputes should return 200 with dispute history for authenticated customer")
     void getDisputeHistory_ShouldReturn200_WhenTokenIsValid() throws Exception {
-        DisputeResponseDto dto = TestPayloadFactory.createDisputeResponseDto();
-        when(disputeService.getDisputeHistory(anyLong(), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(dto)));
+        TransactionEntity tx = saveOwnedTransaction();
+        DisputeRequestDto request = TestPayloadFactory.createDisputeRequest(tx.getTransactionId());
 
-        String token = obtainBearerToken();
+        // Create one real dispute first
+        mockMvc.perform(post("/api/v1/disputes")
+                        .header("Authorization", bearerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/v1/disputes")
-                        .header("Authorization", token))
+        mockMvc.perform(get("/api/v1/disputes").header("Authorization", bearerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].disputeReference").value(dto.disputeReference()))
-                .andExpect(jsonPath("$.content[0].status").value(dto.status().name()));
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].disputeReference").exists())
+                .andExpect(jsonPath("$.content[0].transactionId").value(tx.getTransactionId()));
     }
 
     // Verifies GET /api/v1/disputes returns 403 when no Authorization header is provided
@@ -129,21 +144,25 @@ class DisputeControllerTest {
                 .andExpect(status().isForbidden());
     }
 
-    // Web-layer verification (Property 1): a ForbiddenException raised by the service for an
-    // ownership violation (customer B disputing customer A's transaction) is mapped by
-    // GlobalExceptionHandler to HTTP 403 with a structured ErrorResponseDto payload.
+    // End-to-end ownership check: a second customer disputing the first customer's transaction is
+    // mapped to HTTP 403 with a structured ErrorResponseDto. This runs the real ownership guard in
+    // DisputeService (not a mock), confirming the ForbiddenException -> 403 mapping on a live POST.
     // **Validates: Requirements 2.1, 2.2**
     @Test
     @DisplayName("POST /api/v1/disputes should return 403 with structured error when disputing another customer's transaction")
     void submitDispute_ShouldReturn403_WhenTransactionNotOwned() throws Exception {
-        when(disputeService.submitDispute(anyLong(), any(DisputeRequestDto.class)))
-                .thenThrow(new ForbiddenException(AppConstants.MSG_UNAUTHORIZED_TRANSACTION_ACCESS));
+        // First customer's transaction (from setUp's account)
+        TransactionEntity othersTransaction = saveOwnedTransaction();
 
-        DisputeRequestDto request = TestPayloadFactory.createDisputeRequest(5000102L);
-        String token = obtainBearerToken();
+        // A second, different customer authenticates and tries to dispute it
+        AuthResponseDto other = authService.register(new RegisterRequestDto(
+                "Thandeka", "Nkosi", "thandeka.nkosi@example.co.za", "Password123!"));
+        String otherToken = "Bearer " + other.token();
+
+        DisputeRequestDto request = TestPayloadFactory.createDisputeRequest(othersTransaction.getTransactionId());
 
         mockMvc.perform(post("/api/v1/disputes")
-                        .header("Authorization", token)
+                        .header("Authorization", otherToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden())
@@ -153,4 +172,3 @@ class DisputeControllerTest {
                 .andExpect(jsonPath("$.path").exists());
     }
 }
-

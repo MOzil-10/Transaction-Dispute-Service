@@ -1,60 +1,47 @@
 @startuml
+title Customer Login
 autonumber
 skinparam Style strictuml
 skinparam SequenceMessageAlignment center
 skinparam boxPadding 10
 
-box "User Layer" #E6F0FA
-actor "Customer\n(Rita)" as Customer
+box "User" #E6F0FA
+actor "Customer" as Customer
 end box
 
-box "Frontend Layer" #E6F9E6
-participant "Angular Frontend\n(Web App)" as Frontend
+box "Client" #E6F9E6
+participant "DisputeX Web App" as Frontend
 end box
 
-box "API & Service Layer" #FFF9E6
-participant "AuthController" as Controller
-participant "AuthService" as Service
-participant "AuthenticationManager\n(Spring Security)" as AuthManager
-participant "UserRepository" as UserRepo
-participant "UserDetailsService" as UDS
-participant "JwtService" as JWT
+box "DisputeX Backend" #FFF9E6
+participant "DisputeX API" as Api
+participant "Authentication Service" as Auth
+participant "Token Service" as Token
 end box
 
-box "Database Layer" #F2E6FF
-database "PostgreSQL\n(RDS Database)" as DB
+box "Data" #F2E6FF
+database "Customer Store" as DB
 end box
 
-Customer -> Frontend: Log in (email + password)
-Frontend -> Controller: POST /api/v1/auth/login\n(LoginRequestDto)
+note over Api: Public endpoint - no token required
 
-Controller -> Service: login(request)
-Service -> AuthManager: authenticate(\nUsernamePasswordAuthenticationToken)
-AuthManager -> UDS: loadUserByUsername(email)
-UDS -> DB: SELECT ... FROM customers WHERE email = ?
-DB --> UDS: UserEntity (passwordHash)
-UDS --> AuthManager: UserDetails
+Customer -> Frontend: Enter email and password
+Frontend -> Api: Submit login request
 
-alt #LightPink Invalid Credentials
-    AuthManager --> Service: throw BadCredentialsException
-    Service --> Controller: throw UnauthorizedException\n(MSG_INVALID_CREDENTIALS)
-    Controller --> Frontend: <font color=red><b>401 Unauthorized</b> (ErrorResponseDto)</font>
+Api -> Auth: Authenticate credentials
+Auth -> DB: Look up customer by email
+DB --> Auth: Customer record (with stored password)
+Auth -> Auth: Verify password
+
+alt #LightPink Invalid credentials
+    Auth --> Api: Authentication failed
+    Api --> Frontend: Login rejected (invalid email or password)
     Frontend --> Customer: Show login error
-else #LightGreen Credentials Valid
-    AuthManager --> Service: Authentication successful
-
-    Service -> UserRepo: findByEmail(request.email())
-    UserRepo -> DB: SELECT ... FROM customers WHERE email = ?
-    DB --> UserRepo: UserEntity
-    UserRepo --> Service: UserEntity
-
-    Service -> UDS: loadUserByUsername(user.getEmail())
-    UDS --> Service: UserDetails
-    Service -> JWT: generateToken(userDetails, customerId)
-    JWT --> Service: Bearer JWT (customerId claim)
-
-    Service --> Controller: AuthResponseDto\n(token, customerId, email)
-    Controller --> Frontend: <font color=green><b>200 OK</b> (AuthResponseDto)</font>
-    Frontend --> Customer: Login successful (redirect to dashboard)
+else #LightGreen Credentials valid
+    Auth -> Token: Issue access token for customer
+    Token --> Auth: Access token
+    Auth --> Api: Authenticated (token + customer summary)
+    Api --> Frontend: Login successful (token returned)
+    Frontend --> Customer: Redirect to dashboard
 end
 @enduml

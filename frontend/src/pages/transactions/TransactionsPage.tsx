@@ -34,7 +34,16 @@ export function TransactionsPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
+  // Guard an invalid range client-side (from after to) so we give immediate feedback
+  // instead of firing a request the backend will reject with a 400.
+  const invalidRange = !!fromDate && !!toDate && fromDate > toDate;
+
   useEffect(() => {
+    if (invalidRange) {
+      setLoading(false);
+      setError("The 'from' date can't be after the 'to' date.");
+      return;
+    }
     let active = true;
     setLoading(true);
     setError(null);
@@ -47,7 +56,7 @@ export function TransactionsPage() {
       .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Could not load transactions."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [pageIdx, mandate, fromDate, toDate]);
+  }, [pageIdx, mandate, fromDate, toDate, invalidRange]);
 
   // Client-side free-text search on the current page (merchant/reference).
   const rows = useMemo(() => {
@@ -71,6 +80,9 @@ export function TransactionsPage() {
   const reset = () => {
     setQuery(""); setMandate(""); setFromDate(""); setToDate(""); setPageIdx(0);
   };
+
+  // How many server-side filters are currently applied (drives the "N filters applied" chip).
+  const activeFilterCount = [mandate, fromDate, toDate].filter(Boolean).length;
 
   const totalDebits = (page?.content ?? [])
     .filter((t) => t.amount < 0)
@@ -127,6 +139,11 @@ export function TransactionsPage() {
             className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30" />
           <input type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPageIdx(0); }} aria-label="To date"
             className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30" />
+          {activeFilterCount > 0 && (
+            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/20">
+              {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} applied
+            </span>
+          )}
           <button onClick={reset} className="text-sm font-semibold text-blue-700 hover:text-blue-800">Reset</button>
         </div>
 

@@ -1,93 +1,100 @@
 @startuml
+title Submit a Dispute
 autonumber
 skinparam Style strictuml
 skinparam SequenceMessageAlignment center
 skinparam boxPadding 10
 
-box "User Layer" #E6F0FA
-actor "Customer\n(Rita)" as Customer
+box "User" #E6F0FA
+actor "Customer" as Customer
 end box
 
-box "Frontend Layer" #E6F9E6
-participant "Angular Frontend\n(Web App)" as Frontend
+box "Client" #E6F9E6
+participant "DisputeX Web App" as Frontend
 end box
 
-box "Security & API Layer" #FFF9E6
-participant "JwtAuthenticationFilter" as Filter
-participant "DisputeController" as Controller
-participant "JwtService" as JWT
-participant "DisputeService" as Service
+box "DisputeX Backend" #FFF9E6
+participant "Auth Filter" as Filter
+participant "DisputeX API" as Api
+participant "Dispute Service" as Service
+participant "Risk Engine" as RiskEngine
+participant "Decision Matrix" as Decision
+participant "Event Publisher" as Publisher
 end box
 
-box "Persistence & Engines" #FFE6E6
-participant "UserRepository" as UserRepo
-participant "TransactionRepository" as TxnRepo
-participant "DisputeRepository" as DisputeRepo
-participant "RiskScoreEngine" as RiskEngine
-participant "DecisionMatrix" as DecisionMatrix
-participant "SqsPublisherService" as SqsPublisher
+box "Data" #F2E6FF
+database "Customer Store" as CustomerDB
+database "Transaction Store" as TxnDB
+database "Account Store" as AccountDB
+database "Dispute Store" as DisputeDB
+queue "Message Queue" as Queue
 end box
 
-box "Infrastructure" #F2E6FF
-database "PostgreSQL\n(Database)" as DB
-queue "AWS SQS\n(dispute-events.fifo)" as SQS
-end box
+Customer -> Frontend: Select a transaction and give a reason
+Frontend -> Filter: Submit dispute request\n(with access token)
 
-Customer -> Frontend: Select transaction & provide reason
-Frontend -> Filter: POST /api/v1/disputes\n(Authorization: Bearer <JWT>, DisputeRequestDto)
+Filter -> Filter: Verify access token
+alt #LightPink Token invalid or missing
+    Filter --> Frontend: Session expired
+    Frontend --> Customer: Prompt to log in
+else #LightGreen Token valid
+    Filter -> Api: Forward authenticated request
+    Api -> Service: Submit dispute for customer
 
-Filter -> JWT: isTokenValid(jwt, userDetails)
-alt #LightPink Token Invalid / Missing
-    Filter --> Frontend: <font color=red><b>401 Unauthorized</b></font>
-    Frontend --> Customer: Prompt login
-else #LightGreen Token Valid
-    Filter -> Controller: forward authenticated request
-    Controller -> JWT: extractCustomerId(token)
-    JWT --> Controller: customerId
-    Controller -> Service: submitDispute(customerId, request)
+    Service -> CustomerDB: Load customer
+    CustomerDB --> Service: Customer
+    Service -> TxnDB: Load transaction
+    TxnDB --> Service: Transaction
 
-    Service -> UserRepo: findById(customerId)
-    UserRepo -> DB: SELECT ... FROM customers WHERE customer_id = ?
-    DB --> UserRepo: UserEntity
-    UserRepo --> Service: UserEntity
-
-    Service -> TxnRepo: findById(request.transactionId())
-    TxnRepo -> DB: SELECT ... FROM transactions WHERE transaction_id = ?
-    DB --> TxnRepo: TransactionEntity
-    TxnRepo --> Service: TransactionEntity
-
-    alt #LightPink Transaction Not Owned by Customer
-        Service --> Controller: throw UnauthorizedException\n(MSG_UNAUTHORIZED_TRANSACTION_ACCESS)
-        Controller --> Frontend: <font color=red><b>401 Unauthorized</b> (ErrorResponseDto)</font>
+    alt #LightPink Transaction not owned by customer
+        Service --> Api: Access to transaction denied
+        Api --> Frontend: Dispute refused (not your transaction)
         Frontend --> Customer: Show error message
-    else #LightPink Duplicate Dispute Exists
-        Service -> DisputeRepo: existsByTransactionTransactionId(transactionId)
-        DisputeRepo --> Service: true
-        Service --> Controller: throw BadRequestException\n(MSG_DISPUTE_ALREADY_EXISTS)
-        Controller --> Frontend: <font color=red><b>400 Bad Request</b> (ErrorResponseDto)</font>
+    else #LightPink Outside 60-day dispute window
+        Service -> Service: Check dispute window\n(transaction older than 60 days)
+        Service --> Api: Dispute window closed
+        Api --> Frontend: Dispute refused (too old to dispute)
         Frontend --> Customer: Show error message
-    else #LightGreen Valid & Eligible
-        Service -> RiskEngine: calculate(transaction, reason)
-        RiskEngine --> Service: riskScore (0-100)
+    else #LightPink Transaction category not disputable
+        Service -> Service: Check category eligibility
+        Service --> Api: Category cannot be disputed
+        Api --> Frontend: Dispute refused (not eligible)
+        Frontend --> Customer: Show error message
+    else #LightPink Dispute already lodged
+        Service -> DisputeDB: Check for existing dispute on transaction
+        DisputeDB --> Service: Dispute already exists
+        Service --> Api: Duplicate dispute
+        Api --> Frontend: Dispute refused (already lodged)
+        Frontend --> Customer: Show existing dispute
+    else #LightGreen Valid and eligible
+        Service -> RiskEngine: Score the dispute\n(mandate type + reason)
+        RiskEngine --> Service: Risk score (0-100)
+        Service -> Decision: Route by risk score
+        Decision --> Service: Auto-approve (low risk)\nor Manual investigation (higher risk)
 
-        Service -> DecisionMatrix: evaluate(riskScore)
-        DecisionMatrix --> Service: AUTO_APPROVE (<=50)\nor MANUAL_INVESTIGATION (>50)
+        Service -> DisputeDB: Record dispute\n(status set from routing decision)
+        DisputeDB --> Service: Saved dispute (reference)
 
-        Service -> DisputeRepo: save(DisputeEntity)\n(status AUTO_APPROVED or QUEUED_FOR_AGENT)
-        DisputeRepo -> DB: INSERT INTO disputes (dispute_seq)
-        DB --> DisputeRepo: savedDispute (disputeReference)
-        DisputeRepo --> Service: savedDispute
+        opt Auto-approved
+            Service -> AccountDB: Credit refund to account\n(atomic with the dispute)
+            AccountDB --> Service: Updated balance
+        end
 
-        Service -> SqsPublisher: publishDisputeEvent(savedDispute)
-        SqsPublisher -> SQS: sendMessage(dispute event JSON)
-        SQS --> SqsPublisher: sqsMessageId
-        SqsPublisher --> Service: sqsMessageId
-        Service -> DisputeRepo: save(dispute with sqsMessageId)
-        DisputeRepo -> DB: UPDATE disputes SET sqs_message_id = ?
+        Service -> Publisher: Publish dispute event
+        Publisher -> Queue: Enqueue dispute event
+        Queue --> Publisher: Accepted (message id)
+        note right of Publisher
+          Queue delivery is non-blocking:
+          if it fails, the dispute is still
+          saved and the customer still gets
+          a response.
+        end note
+        Publisher --> Service: Message id
+        Service -> DisputeDB: Attach message id for audit
 
-        Service --> Controller: DisputeResponseDto\n(disputeReference, riskScore, decisionRoute, status, message)
-        Controller --> Frontend: <font color=green><b>201 Created</b> (DisputeResponseDto)</font>
-        Frontend --> Customer: Show confirmation (dispute reference + outcome)
+        Service --> Api: Dispute outcome\n(reference, status, refunded amount, message)
+        Api --> Frontend: Dispute created
+        Frontend --> Customer: Show confirmation and outcome
     end
 end
 @enduml
