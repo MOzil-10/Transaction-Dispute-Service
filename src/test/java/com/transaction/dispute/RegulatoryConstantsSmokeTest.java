@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * NOTE: Schema/migration validation (Req 3.6/3.7/8.4) is NOT re-tested here. It is already
  * proven by the existing @SpringBootTest suite (e.g. DisputeApplicationTests), which boots
- * under ddl-auto: validate on H2 — the application context would fail to start if the JPA
+ * under ddl-auto: validate on H2 â€” the application context would fail to start if the JPA
  * entity model and the H2 migrations disagreed. No redundant context-load test is added.
  */
 class RegulatoryConstantsSmokeTest {
@@ -47,9 +47,9 @@ class RegulatoryConstantsSmokeTest {
 
     // Validates: Requirements (transaction category taxonomy)
     @Test
-    @DisplayName("TransactionCategory has exactly the 7 expected values")
-    void transactionCategory_hasSevenExpectedValues() {
-        assertThat(TransactionCategory.values()).hasSize(7);
+    @DisplayName("TransactionCategory has exactly the 9 expected values")
+    void transactionCategory_hasExpectedValues() {
+        assertThat(TransactionCategory.values()).hasSize(9);
         assertThat(Arrays.stream(TransactionCategory.values()).map(Enum::name))
                 .containsExactlyInAnyOrder(
                         "ONLINE_RETAIL",
@@ -57,8 +57,17 @@ class RegulatoryConstantsSmokeTest {
                         "GYM_MEMBERSHIP",
                         "LOAN",
                         "MUNICIPAL",
+                        "FOOD_DELIVERY",
                         "P2P_TRANSFER",
-                        "IN_STORE_RETAIL");
+                        "IN_STORE_RETAIL",
+                        "GAMBLING");
+    }
+
+    @Test
+    @DisplayName("GAMBLING is non-disputable; FOOD_DELIVERY is disputable")
+    void newCategories_haveExpectedDisputability() {
+        assertThat(TransactionCategory.GAMBLING.isDisputable()).isFalse();
+        assertThat(TransactionCategory.FOOD_DELIVERY.isDisputable()).isTrue();
     }
 
     // Validates: Requirements 3.8 (REGISTERED_MANDATE mandate type exists)

@@ -6,8 +6,10 @@ public enum TransactionCategory {
     GYM_MEMBERSHIP(true),
     LOAN(true),
     MUNICIPAL(true),
+    FOOD_DELIVERY(true),
     P2P_TRANSFER(false),
-    IN_STORE_RETAIL(false);
+    IN_STORE_RETAIL(false),
+    GAMBLING(false);
 
     private final boolean disputable;
 

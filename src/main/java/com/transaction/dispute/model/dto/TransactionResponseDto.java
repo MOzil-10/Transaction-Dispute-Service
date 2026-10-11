@@ -1,6 +1,7 @@
 package com.transaction.dispute.model.dto;
 
 import com.transaction.dispute.model.enums.MandateType;
+import com.transaction.dispute.model.enums.TransactionCategory;
 import com.transaction.dispute.model.enums.TransactionStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -27,6 +28,9 @@ public record TransactionResponseDto(
 
         @Schema(description = "Clearing framework / mandate protocol used for payment", example = "STANDARD_EFT")
         MandateType mandateType,
+
+        @Schema(description = "Business category of the transaction (drives disputability and display)", example = "MOBILE_CONTRACT")
+        TransactionCategory category,
 
         @Schema(description = "Current settlement status of the transaction", example = "COMPLETED")
         TransactionStatus status,

@@ -23,11 +23,13 @@ class TransactionCategoryPropertyTest {
             TransactionCategory.MOBILE_CONTRACT,
             TransactionCategory.GYM_MEMBERSHIP,
             TransactionCategory.LOAN,
-            TransactionCategory.MUNICIPAL);
+            TransactionCategory.MUNICIPAL,
+            TransactionCategory.FOOD_DELIVERY);
 
     private static final Set<TransactionCategory> NON_DISPUTABLE = EnumSet.of(
             TransactionCategory.P2P_TRANSFER,
-            TransactionCategory.IN_STORE_RETAIL);
+            TransactionCategory.IN_STORE_RETAIL,
+            TransactionCategory.GAMBLING);
 
     @Provide
     Arbitrary<TransactionCategory> categories() {
@@ -37,8 +39,8 @@ class TransactionCategoryPropertyTest {
     // Feature: regulatory-dispute-eligibility, Property 3: Category disputable classification
     /**
      * For all {@link TransactionCategory} values, {@code isDisputable()} returns true exactly for
-     * ONLINE_RETAIL, MOBILE_CONTRACT, GYM_MEMBERSHIP, LOAN, and MUNICIPAL, and false exactly for
-     * P2P_TRANSFER and IN_STORE_RETAIL.
+     * ONLINE_RETAIL, MOBILE_CONTRACT, GYM_MEMBERSHIP, LOAN, MUNICIPAL, and FOOD_DELIVERY, and false
+     * exactly for P2P_TRANSFER, IN_STORE_RETAIL, and GAMBLING.
      *
      * <p><b>Validates: Requirements 3.3, 3.4</b>
      */
