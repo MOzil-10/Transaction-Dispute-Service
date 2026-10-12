@@ -112,10 +112,26 @@ aws cloudformation describe-stacks --region af-south-1 --stack-name disputex-dem
 
 Note the `PublicIp`, `QueueUrl` and `Region` values.
 
-## Step 5 - DNS
+## Step 5 - DNS (free DuckDNS subdomain)
 
-Point your domain's A record at the `PublicIp` from Step 4 (TTL 300). Confirm it resolves
-(`nslookup your-domain`) before Step 8 - Let's Encrypt needs the record live to issue the cert.
+This demo uses a free DuckDNS subdomain instead of a paid domain - zero up-front cost, and
+Caddy still gets a real Let's Encrypt certificate (each *.duckdns.org name is its own
+registrable domain, so the normal HTTP-01 challenge on port 80 works).
+
+1. Go to https://www.duckdns.org and sign in (GitHub/Google - no payment, no card).
+2. Create a subdomain, e.g. `disputex-demo`, giving you `disputex-demo.duckdns.org`.
+3. In the DuckDNS dashboard set that subdomain's "current ip" to the `PublicIp` from Step 4
+   and click **update ip**. DuckDNS is itself the DNS host, so the IP you enter here IS the
+   A record - there is no separate registrar screen.
+4. Confirm it resolves to your Elastic IP before Step 8 (Let's Encrypt needs it live):
+
+```bash
+nslookup disputex-demo.duckdns.org
+```
+
+Use `disputex-demo.duckdns.org` as the `DOMAIN` value in `deploy/.env` (Step 7). Nothing in
+the Caddyfile or the CloudFormation stack changes - DuckDNS simply plays the role a
+registered domain would.
 
 ## Step 6 - Install Docker on the instance
 
