@@ -37,25 +37,30 @@ export function DashboardPage() {
 
   useEffect(() => {
     transactionService
-      .list(0, 50)
+      .list(0, 200)
       .then((p) => setTxns(p.content))
       .catch(() => setTxns([]))
       .finally(() => setTxLoading(false));
   }, []);
 
-  // Derived: total debits this month + a simple daily bar series (no chart endpoint on the backend).
-  const { totalDebits, series, maxBar } = useMemo(() => {
-    const now = new Date();
-    const month = txns.filter((t) => {
+// Derived: spend grouped by month across the customer's whole transaction history, so the chart
+  // shows every month that has activity (not just the current one). Transaction amounts are the
+  // debit value regardless of sign, so we use the absolute value. Computed client-side from the
+  // transaction list (there is no chart endpoint on the backend).
+  const { totalSpend, series, maxBar } = useMemo(() => {
+    const byMonth = new Map<string, { label: string; value: number; sort: number }>();
+    for (const t of txns) {
       const d = new Date(t.transactionDate);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && t.amount < 0;
-    });
-    const total = month.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    const byDay = new Map<number, number>();
-    for (const t of month) byDay.set(new Date(t.transactionDate).getDate(), (byDay.get(new Date(t.transactionDate).getDate()) ?? 0) + Math.abs(t.amount));
-    const days = Array.from(byDay.keys()).sort((a, b) => a - b).slice(0, 8);
-    const s = days.map((day) => ({ day, value: byDay.get(day) ?? 0 }));
-    return { totalDebits: total, series: s, maxBar: Math.max(1, ...s.map((x) => x.value)) };
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const label = d.toLocaleDateString("en-ZA", { month: "short", year: "2-digit" });
+      const sort = d.getFullYear() * 12 + d.getMonth();
+      const prev = byMonth.get(key);
+      byMonth.set(key, { label, value: (prev?.value ?? 0) + Math.abs(t.amount), sort });
+    }
+    // Chronological, keep the most recent 12 months with activity.
+    const s = Array.from(byMonth.values()).sort((a, b) => a.sort - b.sort).slice(-12);
+    const total = s.reduce((sum, m) => sum + m.value, 0);
+    return { totalSpend: total, series: s, maxBar: Math.max(1, ...s.map((x) => x.value)) };
   }, [txns]);
 
   const firstName = account?.firstName ?? user?.email?.split("@")[0]?.split(".")[0] ?? "there";
@@ -104,34 +109,34 @@ export function DashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        {/* Recent activity (derived chart) */}
+        {/* Recent activity (spend per month, derived client-side) */}
         <Card className="p-5 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-slate-900">Recent activity</h2>
+            <h2 className="text-base font-semibold text-slate-900">Spending by month</h2>
             <span className="flex items-center gap-1 text-xs text-slate-400">
-              <TrendingUp className="h-3.5 w-3.5" /> This month
+              <TrendingUp className="h-3.5 w-3.5" /> All transactions
             </span>
           </div>
-          <p className="text-2xl font-bold text-slate-900">{formatZar(totalDebits)}</p>
-          <p className="text-xs text-slate-500">Total debits this month</p>
+          <p className="text-2xl font-bold text-slate-900">{formatZar(totalSpend)}</p>
+          <p className="text-xs text-slate-500">Total across {series.length} month{series.length === 1 ? "" : "s"}</p>
           {txLoading ? (
             <div className="flex h-40 items-center justify-center"><Spinner /></div>
           ) : series.length === 0 ? (
             <div className="flex h-40 items-center justify-center text-sm text-slate-400">
-              No debit activity this month yet.
+              No transaction activity yet.
             </div>
           ) : (
-            <div className="mt-4 flex h-40 items-end gap-2">
+            <div className="mt-4 flex h-40 items-stretch gap-2">
               {series.map((b) => (
-                <div key={b.day} className="flex flex-1 flex-col items-center gap-2">
+                <div key={b.label} className="flex h-full flex-1 flex-col items-center gap-2">
                   <div className="flex w-full flex-1 items-end">
                     <div
                       className="w-full rounded-t bg-blue-600"
                       style={{ height: `${Math.max(4, (b.value / maxBar) * 100)}%` }}
-                      title={formatZar(b.value)}
+                      title={`${b.label}: ${formatZar(b.value)}`}
                     />
                   </div>
-                  <span className="text-[10px] text-slate-400">{String(b.day).padStart(2, "0")}</span>
+                  <span className="text-[10px] text-slate-400">{b.label}</span>
                 </div>
               ))}
             </div>

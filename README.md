@@ -89,6 +89,35 @@ password `Password123!`:
 | `mesut.ozil@example.co.za` | Main account |
 | `donald.duck@example.co.za` | Savings plan |
 
+### Demo walkthrough (every dispute scenario)
+
+The seed gives each of the three customers the same set of labelled transactions so a reviewer
+can exercise every path. Open **Transactions**, find the transaction by its reference (the first
+rows of each account are the labelled ones), and click **Dispute**. The reference tells you what
+to expect:
+
+| Transaction reference | What it is | Expected result |
+|-----------------------|------------|-----------------|
+| `TXN-<NAME>-AUTO-PRE60` | DEBICHECK, within the 60-day window | **Auto-approved + instant refund** - the account balance updates immediately |
+| `TXN-<NAME>-MANUAL-PRE60` | STANDARD_EFT, within the window | **Queued for an agent** (manual investigation); an event is published to SQS |
+| `TXN-<NAME>-EDGE60` | ~57 days old (just inside the window) | **Still disputable** - demonstrates the boundary (PRE60) |
+| `TXN-<NAME>-POST60` | 90-100 days old, disputable category | **Rejected - window closed** (HTTP 400): the 60-day window has passed (POST60) |
+| `TXN-<NAME>-NODISPUTE-GAMB` | Gambling | **Not disputable** - ineligible category |
+| `TXN-<NAME>-NODISPUTE-POS` / `-P2P` | In-store purchase / money transfer | **Not disputable** - ineligible category |
+
+`<NAME>` is `TREVOR`, `MESUT` or `DONALD`. Other things to try:
+
+- **Duplicate guard:** dispute an `AUTO-PRE60` transaction, then try to dispute it again - the UI
+  shows its status and blocks a second submission (the backend returns HTTP 400).
+- **Customer isolation:** log in as a different customer - you only ever see and can dispute your
+  own transactions.
+- **Dispute history:** every submission appears under **Disputes** with its risk score, decision
+  route and status.
+
+> Tip: `AUTO-PRE60` and `POST60` are the two most impactful to show - instant refund vs the
+> 60-day window being enforced. The `POST60` rows are also the reliable way to re-demonstrate the
+> window rule, since a transaction can only be disputed once.
+
 ---
 
 ## Running the Backend Locally (without Docker)

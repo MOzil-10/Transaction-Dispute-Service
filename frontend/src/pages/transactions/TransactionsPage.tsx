@@ -9,7 +9,8 @@ import { Spinner } from "@/components/ui/Spinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { transactionService } from "@/services/transactionService";
 import { useDisputes } from "@/hooks/useDisputes";
-import { formatSignedZar, formatDate } from "@/lib/format";
+import { useAccount } from "@/context/AccountContext";
+import { formatSignedZar, formatDate, formatZar, accountTypeLabel } from "@/lib/format";
 import { TRANSACTION_STATUS_META, DISPUTE_STATUS_META, TRANSACTION_CATEGORY_LABELS } from "@/lib/constants";
 import type { DisputeResponse, MandateType, Page, TransactionResponse } from "@/types/api";
 
@@ -24,6 +25,7 @@ const MANDATE_FILTERS: { value: MandateType | ""; label: string }[] = [
 export function TransactionsPage() {
   const navigate = useNavigate();
   const { openCount, disputes } = useDisputes();
+  const { account } = useAccount();
   const [page, setPage] = useState<Page<TransactionResponse> | null>(null);
   const [pageIdx, setPageIdx] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -84,8 +86,9 @@ export function TransactionsPage() {
   // How many server-side filters are currently applied (drives the "N filters applied" chip).
   const activeFilterCount = [mandate, fromDate, toDate].filter(Boolean).length;
 
+  // Debits shown on the current page. Transactions are stored as positive debit amounts,
+  // so sum their absolute values rather than filtering on a negative sign.
   const totalDebits = (page?.content ?? [])
-    .filter((t) => t.amount < 0)
     .reduce((s, t) => s + Math.abs(t.amount), 0);
 
   return (
@@ -107,8 +110,13 @@ export function TransactionsPage() {
               <Wallet className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-slate-900">Checking account</p>
-              <p className="text-xs text-slate-500">ZAR</p>
+              <p className="text-sm font-semibold text-slate-900">
+                {account ? accountTypeLabel(account.accountType) : "Account"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {account?.currency ?? "ZAR"}
+                {account ? ` \u00b7 ${formatZar(account.balance)}` : ""}
+              </p>
             </div>
           </div>
           <div className="text-right">
