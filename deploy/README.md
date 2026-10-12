@@ -163,6 +163,40 @@ nano deploy/.env        # set DOMAIN, JWT_SECRET_KEY, DB_PASSWORD,
 
 No AWS keys go in `.env` - the instance role supplies them.
 
+### Step 7b - Validate `deploy/.env` before launching
+
+Check each value - these are the mistakes that cause a failed boot or a cert that will
+never issue:
+
+- [ ] `DOMAIN` is your real DuckDNS hostname (e.g. `disputex-demo.duckdns.org`), NOT the
+      `your-subdomain.duckdns.org` placeholder, and it already resolves to your Elastic IP
+      (Step 5). Let's Encrypt will fail if DNS is not live.
+- [ ] `JWT_SECRET_KEY` is a freshly generated value (>= 32 bytes), NOT the placeholder and
+      NOT the local demo key.
+- [ ] `DB_PASSWORD` is set to a strong value, NOT the placeholder.
+- [ ] `AWS_REGION` matches the region you deployed the stack in (`af-south-1`).
+- [ ] `AWS_SQS_DISPUTE_QUEUE_URL` is the full `https://sqs.<region>.amazonaws.com/<acct>/dispute-events.fifo`
+      URL from the stack output (Step 4), ending in `.fifo`.
+- [ ] There are NO `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` lines (the instance role
+      supplies credentials; static keys here would override it).
+
+Quick automated check (run from the repo root on the instance):
+
+```bash
+set -a; . deploy/.env; set +a
+fail=0
+case "$DOMAIN" in *your-subdomain*|"") echo "DOMAIN not set"; fail=1;; esac
+[ "${#JWT_SECRET_KEY}" -ge 32 ] || { echo "JWT_SECRET_KEY too short / unset"; fail=1; }
+case "$JWT_SECRET_KEY" in *replace-with*|"") echo "JWT_SECRET_KEY still a placeholder"; fail=1;; esac
+case "$DB_PASSWORD" in *replace-with*|"") echo "DB_PASSWORD still a placeholder"; fail=1;; esac
+case "$AWS_SQS_DISPUTE_QUEUE_URL" in https://sqs.*.amazonaws.com/*/*.fifo) ;; *) echo "queue URL looks wrong"; fail=1;; esac
+[ -n "$AWS_REGION" ] || { echo "AWS_REGION unset"; fail=1; }
+[ -z "$AWS_ACCESS_KEY_ID" ] || echo "WARNING: AWS_ACCESS_KEY_ID is set - remove it (use the instance role)"
+nslookup "$DOMAIN" >/dev/null 2>&1 || echo "WARNING: $DOMAIN does not resolve yet (finish Step 5)"
+[ "$fail" -eq 0 ] && echo "deploy/.env looks good" || echo "Fix the items above before Step 8"
+```
+
+
 ## Step 8 - Launch the stack
 
 ```bash
