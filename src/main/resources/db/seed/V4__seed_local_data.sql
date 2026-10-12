@@ -50,9 +50,9 @@ INSERT INTO customers (customer_id, customer_number, first_name, last_name, emai
     (1000002, 'CUST-MESUT-002',  'Mesut',  'Ozil',   'mesut.ozil@example.co.za',    '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe'),
     (1000003, 'CUST-DONALD-003', 'Donald', 'Duck',   'donald.duck@example.co.za',   '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe'),
     -- Capitec reviewer accounts (share these three; keep the three above for your own testing).
-    (1000004, 'CUST-CAPITEC-004', 'Thandeka', 'Nkosi',    'thandeka.nkosi@disputex.co.za', '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe'),
-    (1000005, 'CUST-CAPITEC-005', 'Sipho',    'Dlamini',  'sipho.dlamini@disputex.co.za',  '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe'),
-    (1000006, 'CUST-CAPITEC-006', 'Lerato',   'Mahlangu', 'lerato.mahlangu@disputex.co.za','$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe');
+    (1000004, 'CUST-DISPUTEX-004', 'Thandeka', 'Nkosi',    'thandeka.nkosi@disputex.co.za', '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe'),
+    (1000005, 'CUST-DISPUTEX-005', 'Sipho',    'Dlamini',  'sipho.dlamini@disputex.co.za',  '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe'),
+    (1000006, 'CUST-DISPUTEX-006', 'Lerato',   'Mahlangu', 'lerato.mahlangu@disputex.co.za','$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe');
 
 -- ---- Accounts (one per customer) -------------------------------------------
 INSERT INTO accounts (account_id, customer_id, account_number, account_type, balance, currency) VALUES
