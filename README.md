@@ -80,20 +80,10 @@ Once started:
 > throwaway values for local/demo use only. In a real deployment these come from a secret
 > manager and are never committed.
 
-The database is seeded with demo customers (local profile only). All demo users share the
-password `Password123!`:
-
-| Email | Account |
-|-------|---------|
-| `trevor.sesoko@example.co.za` | Main account |
-| `mesut.ozil@example.co.za` | Main account |
-| `donald.duck@example.co.za` | Savings plan |
-| `thandeka.nkosi@disputex.co.za` | Main account |
-| `sipho.dlamini@disputex.co.za` | Main account |
-| `lerato.mahlangu@disputex.co.za` | Savings plan |
-
-The three `@disputex.co.za` accounts carry the same labelled scenario set and are meant for
-reviewers to test against.
+The database is seeded with a set of demo customers (local profile only), each pre-loaded
+with the labelled transactions described below so every dispute scenario can be exercised.
+Login credentials for the deployed demo are shared separately with reviewers and are not
+published here.
 
 ### Demo walkthrough (every dispute scenario)
 
