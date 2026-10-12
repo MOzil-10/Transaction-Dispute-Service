@@ -7,14 +7,27 @@
 #
 # {$DOMAIN} is supplied from the environment (see deploy/.env.example).
 # For a quick test without a domain you can replace {$DOMAIN} with the literal
-# EC2 public IP and Caddy will serve self-signed TLS (browser warning), but a
-# real domain + Let's Encrypt is strongly recommended for the submission.
+# EC2 public IP and Caddy will serve its internal/self-signed TLS (browser
+# warning); a real domain + Let's Encrypt is strongly recommended.
 
 {$DOMAIN} {
     encode gzip
 
-    # Backend API and OpenAPI docs
-    @api path /api/* /v3/api-docs* /swagger-ui* /swagger-ui.html
+    # Security headers are set at site level so they apply to EVERY response.
+    # (A `handle` block is mutually exclusive with the catch-all below, so headers
+    # defined inside one would never run - they must live here instead.)
+    header {
+        # 1 year, no preload/includeSubDomains: safe to roll back if the single
+        # demo domain's TLS is ever removed after the assessment.
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        -Server
+    }
+
+    # Backend API and OpenAPI docs. Health is exposed for a quick external probe.
+    @api path /api/* /v3/api-docs* /swagger-ui* /swagger-ui.html /actuator/health
     handle @api {
         reverse_proxy app:8087
     }
@@ -22,14 +35,5 @@
     # Single-page app (static assets + client-side routes)
     handle {
         reverse_proxy frontend:80
-    }
-
-    # Security headers appropriate for a public demo
-    header {
-        Strict-Transport-Security "max-age=31536000;"
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY"
-        Referrer-Policy "no-referrer"
-        -Server
     }
 }

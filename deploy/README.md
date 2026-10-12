@@ -21,6 +21,13 @@ is OUT OF SCOPE. Messages therefore accumulate in the queue (visible in the SQS 
 which is itself proof the producer works. A production system would add a consumer plus a
 dead-letter queue and redrive.
 
+The deployed stack runs under the Spring `prod` profile (set in
+`deploy/docker-compose.prod.yml`). For this throwaway reviewer demo the profile loads the
+labelled demo accounts on purpose, so a reviewer can log in with a shared account and
+exercise every dispute scenario immediately (see the demo-account table in the main
+README). The `prod` profile differs from `local` only in logging (no SQL/DEBUG) and in
+using real Amazon SQS instead of LocalStack.
+
 ## What the CloudFormation stack creates
 
 - SQS FIFO queue `dispute-events.fifo` (14-day message retention)
@@ -146,7 +153,7 @@ No AWS keys go in `.env` - the instance role supplies them.
 docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build
 ```
 
-Order: postgres -> app (Flyway V1..V5 + seed) -> frontend -> caddy (provisions TLS).
+Order: postgres -> app (Flyway V1..V5 schema + demo seed) -> frontend -> caddy (provisions TLS).
 First boot builds images + issues the cert; allow 2-3 minutes.
 
 ```bash
@@ -156,9 +163,13 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml ps
 ## Step 9 - Verify
 
 - `https://your-domain` -> login screen with a valid certificate.
-- `https://your-domain/actuator/health` -> {"status":"UP"}
+- `https://your-domain/actuator/health` -> {"status":"UP"} (the only Actuator endpoint exposed)
 - `https://your-domain/swagger-ui/index.html` -> API docs.
-- Submit a dispute, then check SQS console -> the queue's "Messages available" count rises.
+- Log in with one of the seeded demo accounts (see the main README demo-account table;
+  shared password there). Open Transactions, dispute a `*-MANUAL-PRE60` transaction (routed
+  to an agent, so it publishes to SQS), then check the SQS console: the `dispute-events.fifo`
+  queue "Messages available" count rises. A `*-AUTO-PRE60` dispute is auto-approved + refunded
+  and also publishes a message.
 
 ## Watching logs live (CloudWatch)
 

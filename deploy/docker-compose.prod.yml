@@ -12,7 +12,7 @@
 #     credential provider chain) - no static AWS keys are placed on the host.
 #   * Ships app / frontend / caddy container logs to Amazon CloudWatch Logs (awslogs
 #     driver) under the log group "disputex" so you can watch activity live while a
-#     reviewer tests. The instance role grants the logs:* permissions; the log group is
+#     reviewer tests. The instance role grants the logs permissions; the log group is
 #     created by the CloudFormation stack.
 #   * Supplies the JWT key, DB password, domain and real queue URL from deploy/.env.
 #
@@ -20,11 +20,16 @@
 # deployed stack. Local development still uses the base docker-compose.yml unchanged (with
 # LocalStack), so the app can run locally with no AWS account.
 #
-# Requires Docker Compose v2.24+ for the `!reset` override tag used below.
+# IMPORTANT - Compose merge semantics: Compose MERGES lists and maps across files, so an
+# inherited published port or environment variable is NOT removed by simply re-declaring an
+# empty value. We therefore use the `!reset` override tag (Compose v2.24+) to actually drop
+# the base file's host port publishing and the LocalStack-only AWS variables. Run
+# `docker compose ... config` after any change here to confirm the result.
 
 services:
   postgres:
-    ports: []
+    # Drop the base file's "5432:5432" so the DB is NOT reachable from the host/internet.
+    ports: !reset []
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
 
@@ -34,7 +39,8 @@ services:
     profiles: ["local-only"]
 
   app:
-    ports: []
+    # Drop the base file's "8087:8087" so the backend is reachable only via Caddy.
+    ports: !reset []
     # Clear the inherited localstack dependency (Compose MERGES depends_on, so without
     # !reset the app would wait forever for a localstack that this stack never starts),
     # then depend only on Postgres being healthy.
@@ -42,19 +48,22 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: local
+      SPRING_PROFILES_ACTIVE: prod
       CORS_ALLOWED_ORIGINS: https://${DOMAIN}
       DB_URL: jdbc:postgresql://postgres:5432/dispute_db
       DB_USERNAME: dispute
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_EXPIRATION: "86400000"
-      # Real Amazon SQS. Region + queue URL from deploy/.env. NO static keys and NO
-      # endpoint override: the AWS SDK resolves credentials from the EC2 instance role.
+      # Real Amazon SQS. Region + queue URL from deploy/.env.
       AWS_REGION: ${AWS_REGION}
       AWS_SQS_DISPUTE_QUEUE_URL: ${AWS_SQS_DISPUTE_QUEUE_URL}
-      # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY: deliberately unset (instance role).
-      # AWS_SQS_ENDPOINT_OVERRIDE: deliberately unset (hit real AWS, not LocalStack).
+      # Clear the base file's LocalStack-only values. Without !reset these would leak into
+      # production: dummy static keys would override the instance role, and the endpoint
+      # override would send traffic to a LocalStack that does not run here.
+      AWS_ACCESS_KEY_ID: !reset null
+      AWS_SECRET_ACCESS_KEY: !reset null
+      AWS_SQS_ENDPOINT_OVERRIDE: !reset null
     logging:
       driver: awslogs
       options:
@@ -64,7 +73,8 @@ services:
         awslogs-stream: app
 
   frontend:
-    ports: []
+    # Drop the base file's "3000:80" so the SPA is reachable only via Caddy.
+    ports: !reset []
     logging:
       driver: awslogs
       options:

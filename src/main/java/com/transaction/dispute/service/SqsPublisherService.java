@@ -55,7 +55,12 @@ public class SqsPublisherService {
         } catch (Exception ex) {
             // SQS failure is non-fatal — dispute is already persisted.
             // Log the error and allow the transaction to complete.
-            log.error("Failed to publish dispute event to SQS — disputeReference={}: {}", dispute.getDisputeReference(), ex.getMessage());
+            log.error("Failed to publish dispute event to SQS - disputeReference={}, route={}, status={}: {}",
+                    dispute.getDisputeReference(), dispute.getDecisionRoute(), dispute.getStatus(), ex.getMessage());
+            if (dispute.getStatus() == com.transaction.dispute.model.enums.DisputeStatus.QUEUED_FOR_AGENT) {
+                log.warn("Agent-routed dispute was persisted but NOT queued (sqsMessageId will be null) - manual follow-up required: disputeReference={}",
+                        dispute.getDisputeReference());
+            }
             return null;
         }
     }

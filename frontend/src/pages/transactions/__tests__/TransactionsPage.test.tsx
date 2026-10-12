@@ -8,6 +8,12 @@ vi.mock("@/components/layout/AppShell", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+// Account context: the page only reads `account` (for the balance strip). Stub it so the
+// component does not need a real AccountProvider wrapper in this unit test.
+vi.mock("@/context/AccountContext", () => ({
+  useAccount: () => ({ account: null, loading: false, error: null, fullName: "", reload: vi.fn() }),
+}));
+
 // No disputes in this scenario.
 vi.mock("@/hooks/useDisputes", () => ({
   useDisputes: () => ({ disputes: [], openCount: 0, resolvedCount: 0, loading: false, error: null, reload: vi.fn() }),

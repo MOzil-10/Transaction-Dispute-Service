@@ -1,0 +1,63 @@
+# Production/demo profile for the AWS single-host deployment.
+#
+# Differences from the `local` profile:
+#   * Flyway runs ONLY the schema migrations (classpath:db/migration) - the demo
+#     seed data in classpath:db/seed is NOT loaded, so no demo customers or the
+#     shared demo password ever land in the public database.
+#   * Logging is production-safe: no SQL dumping and no DEBUG on application
+#     packages, so customer/banking data and query parameters are not written to
+#     the CloudWatch logs.
+#
+# Every deployment-specific value is supplied via environment variables (see
+# deploy/.env.example); there are no secrets baked into this file.
+server:
+  port: 8087
+
+spring:
+  application:
+    name: dispute
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    # Schema migrations PLUS the demo seed. This is a throwaway ~2-week reviewer demo, so
+    # the labelled demo accounts (shared login) are loaded on purpose so a reviewer can
+    # exercise every dispute scenario immediately. Remove classpath:db/seed if this profile
+    # is ever repurposed for a real (non-demo) deployment.
+    locations: classpath:db/migration,classpath:db/seed
+aws:
+  region: ${AWS_REGION:af-south-1}
+  # No static keys in production: left blank so the AWS SDK default credential
+  # provider chain resolves the EC2 instance role.
+  access-key-id: ${AWS_ACCESS_KEY_ID:}
+  secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+  sqs:
+    dispute-queue-url: ${AWS_SQS_DISPUTE_QUEUE_URL}
+    # No endpoint override in production - hit real Amazon SQS.
+    endpoint-override: ${AWS_SQS_ENDPOINT_OVERRIDE:#{null}}
+
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET_KEY}
+      expiration: ${JWT_EXPIRATION:86400000}
+    cors:
+      # Exactly one public origin in production: the HTTPS frontend domain.
+      allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+logging:
+  level:
+    root: INFO
+    com.transaction.dispute: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN

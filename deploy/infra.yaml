@@ -108,7 +108,7 @@ Resources:
       SecurityGroupIds: [ !Ref WebSecurityGroup ]
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
-          Ebs: { VolumeSize: 20, VolumeType: gp3, DeleteOnTermination: true }
+          Ebs: { VolumeSize: 20, VolumeType: gp3, DeleteOnTermination: true, Encrypted: true }
       Tags:
         - { Key: Name, Value: disputex-demo }
 
