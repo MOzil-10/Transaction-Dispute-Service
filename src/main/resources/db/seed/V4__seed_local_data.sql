@@ -48,13 +48,21 @@
 INSERT INTO customers (customer_id, customer_number, first_name, last_name, email, password_hash) VALUES
     (1000001, 'CUST-TREVOR-001', 'Trevor', 'Sesoko', 'trevor.sesoko@example.co.za', '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe'),
     (1000002, 'CUST-MESUT-002',  'Mesut',  'Ozil',   'mesut.ozil@example.co.za',    '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe'),
-    (1000003, 'CUST-DONALD-003', 'Donald', 'Duck',   'donald.duck@example.co.za',   '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe');
+    (1000003, 'CUST-DONALD-003', 'Donald', 'Duck',   'donald.duck@example.co.za',   '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe'),
+    -- Capitec reviewer accounts (share these three; keep the three above for your own testing).
+    (1000004, 'CUST-CAPITEC-004', 'Thandeka', 'Nkosi',    'thandeka.nkosi@disputex.co.za', '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe'),
+    (1000005, 'CUST-CAPITEC-005', 'Sipho',    'Dlamini',  'sipho.dlamini@disputex.co.za',  '$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe'),
+    (1000006, 'CUST-CAPITEC-006', 'Lerato',   'Mahlangu', 'lerato.mahlangu@disputex.co.za','$2a$10$Z3lDZ/EdlZvvCk7kCp4CyuYwlxvfaEMYE1n1KEuGSw3vT4pAUieRe');
 
 -- ---- Accounts (one per customer) -------------------------------------------
 INSERT INTO accounts (account_id, customer_id, account_number, account_type, balance, currency) VALUES
     (5000001, 1000001, '1001000001', 'MAIN_ACCOUNT', 25000.00, 'ZAR'),
     (5000002, 1000002, '1001000002', 'MAIN_ACCOUNT', 18000.00, 'ZAR'),
-    (5000003, 1000003, '1001000003', 'SAVINGS_PLAN',  9500.00, 'ZAR');
+    (5000003, 1000003, '1001000003', 'SAVINGS_PLAN',  9500.00, 'ZAR'),
+    -- Capitec reviewer accounts
+    (5000004, 1000004, '1001000004', 'MAIN_ACCOUNT', 32000.00, 'ZAR'),
+    (5000005, 1000005, '1001000005', 'MAIN_ACCOUNT', 15400.00, 'ZAR'),
+    (5000006, 1000006, '1001000006', 'SAVINGS_PLAN', 21750.00, 'ZAR');
 
 -- ============================================================================
 -- Transactions. The first SIX rows of each account are the demo-critical,
@@ -130,10 +138,77 @@ INSERT INTO transactions (transaction_id, account_id, reference, merchant, amoun
     (2000086, 5000003, 'TXN-DONALD-TAK-086',  'TAKEALOT'           , 1180.00, 'ZAR', 'STANDARD_EFT', 'ONLINE_RETAIL',   'COMPLETED', now() - INTERVAL '32 days'),
     (2000088, 5000003, 'TXN-DONALD-LOAN-088', 'FNB PERSONAL LOAN'  , 3100.00, 'ZAR', 'STANDARD_EFT', 'LOAN',            'COMPLETED', now() - INTERVAL '36 days');
 
+-- ============================================================================
+-- CAPITEC REVIEWER DATA
+-- Three extra accounts (login details shared with Capitec) carrying the full
+-- labelled scenario set, so a reviewer can exercise every dispute path:
+-- AUTO-PRE60, MANUAL-PRE60, EDGE60, POST60, NODISPUTE-GAMB, NODISPUTE-POS/P2P.
+-- ============================================================================
+
+-- ---- Thandeka Nkosi (account 5000004) --------------------------------------
+INSERT INTO transactions (transaction_id, account_id, reference, merchant, amount, currency, mandate_type, category, status, transaction_date) VALUES
+    -- Demo-critical, self-labelled scenarios
+    (2000501, 5000004, 'TXN-THANDEKA-AUTO-PRE60',     'VIRGIN ACTIVE GYM' ,  450.00, 'ZAR', 'DEBICHECK',    'GYM_MEMBERSHIP',  'COMPLETED', now() - INTERVAL '10 days'),  -- DEBICHECK + in window -> AUTO-APPROVE + refund
+    (2000502, 5000004, 'TXN-THANDEKA-MANUAL-PRE60',   'ABSA HOME LOAN'    , 7400.00, 'ZAR', 'STANDARD_EFT', 'LOAN',            'COMPLETED', now() - INTERVAL '6 days'),   -- STANDARD_EFT + in window -> QUEUED_FOR_AGENT
+    (2000503, 5000004, 'TXN-THANDEKA-EDGE60',         'TAKEALOT'          , 1150.00, 'ZAR', 'STANDARD_EFT', 'ONLINE_RETAIL',   'COMPLETED', now() - INTERVAL '57 days'),  -- near boundary, STILL disputable
+    (2000504, 5000004, 'TXN-THANDEKA-POST60',         'OLD FINANCE LOAN'  , 2900.00, 'ZAR', 'STANDARD_EFT', 'LOAN',            'COMPLETED', now() - INTERVAL '92 days'),  -- WINDOW CLOSED (blocked only by the 60-day rule)
+    (2000505, 5000004, 'TXN-THANDEKA-NODISPUTE-GAMB', 'BETWAY'            ,  600.00, 'ZAR', 'STANDARD_EFT', 'GAMBLING',        'COMPLETED', now() - INTERVAL '6 days'),   -- category not disputable
+    (2000506, 5000004, 'TXN-THANDEKA-NODISPUTE-POS',  'PICK N PAY'        ,  915.40, 'ZAR', 'STANDARD_EFT', 'IN_STORE_RETAIL', 'COMPLETED', now() - INTERVAL '2 days'),   -- in-store POS, not disputable
+    -- Realistic filler
+    (2000507, 5000004, 'TXN-THANDEKA-VOD-507',  'VODACOM'            ,  649.00, 'ZAR', 'DEBICHECK',    'MOBILE_CONTRACT', 'COMPLETED', now() - INTERVAL '5 days'),
+    (2000508, 5000004, 'TXN-THANDEKA-INS-508',  'MOMENTUM INSURANCE' ,  820.00, 'ZAR', 'DEBICHECK',    'LOAN',            'COMPLETED', now() - INTERVAL '11 days'),
+    (2000509, 5000004, 'TXN-THANDEKA-MUN-509',  'CITY OF TSHWANE'    , 1980.00, 'ZAR', 'STANDARD_EFT', 'MUNICIPAL',       'COMPLETED', now() - INTERVAL '13 days'),
+    (2000510, 5000004, 'TXN-THANDEKA-SHO-510',  'SHOPRITE'           ,  712.60, 'ZAR', 'STANDARD_EFT', 'IN_STORE_RETAIL', 'COMPLETED', now() - INTERVAL '3 days'),
+    (2000511, 5000004, 'TXN-THANDEKA-UE-511',   'UBER EATS'          ,  245.00, 'ZAR', 'STANDARD_EFT', 'FOOD_DELIVERY',   'COMPLETED', now() - INTERVAL '1 days'),
+    (2000512, 5000004, 'TXN-THANDEKA-ESK-512',  'ESKOM'              , 1210.00, 'ZAR', 'STANDARD_EFT', 'MUNICIPAL',       'COMPLETED', now() - INTERVAL '19 days'),
+    (2000513, 5000004, 'TXN-THANDEKA-TAK-513',  'TAKEALOT'           ,  540.00, 'ZAR', 'STANDARD_EFT', 'ONLINE_RETAIL',   'COMPLETED', now() - INTERVAL '27 days'),
+    (2000514, 5000004, 'TXN-THANDEKA-VOD-514',  'VODACOM'            ,  649.00, 'ZAR', 'DEBICHECK',    'MOBILE_CONTRACT', 'COMPLETED', now() - INTERVAL '35 days'),
+    (2000515, 5000004, 'TXN-THANDEKA-P2P-515',  'EFT TO N NKOSI'     , 1100.00, 'ZAR', 'STANDARD_EFT', 'P2P_TRANSFER',    'COMPLETED', now() - INTERVAL '12 days');
+
+-- ---- Sipho Dlamini (account 5000005) ---------------------------------------
+INSERT INTO transactions (transaction_id, account_id, reference, merchant, amount, currency, mandate_type, category, status, transaction_date) VALUES
+    -- Demo-critical, self-labelled scenarios
+    (2000521, 5000005, 'TXN-SIPHO-AUTO-PRE60',     'PLANET FITNESS'     ,  399.00, 'ZAR', 'DEBICHECK',    'GYM_MEMBERSHIP',  'COMPLETED', now() - INTERVAL '9 days'),
+    (2000522, 5000005, 'TXN-SIPHO-MANUAL-PRE60',   'CAPITEC VEHICLE LOAN', 4800.00, 'ZAR', 'STANDARD_EFT', 'LOAN',          'COMPLETED', now() - INTERVAL '5 days'),
+    (2000523, 5000005, 'TXN-SIPHO-EDGE60',         'TAKEALOT'           ,  825.00, 'ZAR', 'STANDARD_EFT', 'ONLINE_RETAIL',   'COMPLETED', now() - INTERVAL '58 days'),
+    (2000524, 5000005, 'TXN-SIPHO-POST60',         'OLD FINANCE LOAN'   , 3400.00, 'ZAR', 'STANDARD_EFT', 'LOAN',            'COMPLETED', now() - INTERVAL '96 days'),
+    (2000525, 5000005, 'TXN-SIPHO-NODISPUTE-GAMB', 'HOLLYWOODBETS'      ,  480.00, 'ZAR', 'STANDARD_EFT', 'GAMBLING',        'COMPLETED', now() - INTERVAL '7 days'),
+    (2000526, 5000005, 'TXN-SIPHO-NODISPUTE-POS',  'WOOLWORTHS'         , 1065.90, 'ZAR', 'STANDARD_EFT', 'IN_STORE_RETAIL', 'COMPLETED', now() - INTERVAL '1 days'),
+    -- Realistic filler
+    (2000527, 5000005, 'TXN-SIPHO-MTN-527',  'MTN'                ,  599.00, 'ZAR', 'DEBICHECK',    'MOBILE_CONTRACT', 'COMPLETED', now() - INTERVAL '4 days'),
+    (2000528, 5000005, 'TXN-SIPHO-INS-528',  'DISCOVERY INSURE'   ,  940.00, 'ZAR', 'DEBICHECK',    'LOAN',            'COMPLETED', now() - INTERVAL '8 days'),
+    (2000529, 5000005, 'TXN-SIPHO-MUN-529',  'CITY OF CAPE TOWN'  , 1760.00, 'ZAR', 'STANDARD_EFT', 'MUNICIPAL',       'COMPLETED', now() - INTERVAL '10 days'),
+    (2000530, 5000005, 'TXN-SIPHO-SHO-530',  'CHECKERS'           ,  388.45, 'ZAR', 'STANDARD_EFT', 'IN_STORE_RETAIL', 'COMPLETED', now() - INTERVAL '2 days'),
+    (2000531, 5000005, 'TXN-SIPHO-UE-531',   'UBER EATS'          ,  210.00, 'ZAR', 'STANDARD_EFT', 'FOOD_DELIVERY',   'COMPLETED', now() - INTERVAL '3 days'),
+    (2000532, 5000005, 'TXN-SIPHO-ESK-532',  'ESKOM'              , 1290.00, 'ZAR', 'STANDARD_EFT', 'MUNICIPAL',       'COMPLETED', now() - INTERVAL '15 days'),
+    (2000533, 5000005, 'TXN-SIPHO-NET-533',  'NETFLIX'            ,  199.00, 'ZAR', 'STANDARD_EFT', 'ONLINE_RETAIL',   'COMPLETED', now() - INTERVAL '22 days'),
+    (2000534, 5000005, 'TXN-SIPHO-MTN-534',  'MTN'                ,  599.00, 'ZAR', 'DEBICHECK',    'MOBILE_CONTRACT', 'COMPLETED', now() - INTERVAL '34 days'),
+    (2000535, 5000005, 'TXN-SIPHO-P2P-535',  'EFT TO S DLAMINI'   ,  750.00, 'ZAR', 'STANDARD_EFT', 'P2P_TRANSFER',    'COMPLETED', now() - INTERVAL '14 days');
+
+-- ---- Lerato Mahlangu (account 5000006, SAVINGS_PLAN) -----------------------
+INSERT INTO transactions (transaction_id, account_id, reference, merchant, amount, currency, mandate_type, category, status, transaction_date) VALUES
+    -- Demo-critical, self-labelled scenarios
+    (2000541, 5000006, 'TXN-LERATO-AUTO-PRE60',     'SILVER SNEAKERS GYM',  299.00, 'ZAR', 'DEBICHECK',    'GYM_MEMBERSHIP',  'COMPLETED', now() - INTERVAL '8 days'),
+    (2000542, 5000006, 'TXN-LERATO-MANUAL-PRE60',   'FNB PERSONAL LOAN'  , 2700.00, 'ZAR', 'STANDARD_EFT', 'LOAN',            'COMPLETED', now() - INTERVAL '4 days'),
+    (2000543, 5000006, 'TXN-LERATO-EDGE60',         'TAKEALOT'           ,  590.00, 'ZAR', 'STANDARD_EFT', 'ONLINE_RETAIL',   'COMPLETED', now() - INTERVAL '56 days'),
+    (2000544, 5000006, 'TXN-LERATO-POST60',         'OLD CLOTHING STORE' ,  480.00, 'ZAR', 'STANDARD_EFT', 'ONLINE_RETAIL',   'COMPLETED', now() - INTERVAL '98 days'),
+    (2000545, 5000006, 'TXN-LERATO-NODISPUTE-GAMB', 'BETWAY'             ,  260.00, 'ZAR', 'STANDARD_EFT', 'GAMBLING',        'COMPLETED', now() - INTERVAL '7 days'),
+    (2000546, 5000006, 'TXN-LERATO-NODISPUTE-P2P',  'EFT TO L MAHLANGU'  ,  520.00, 'ZAR', 'STANDARD_EFT', 'P2P_TRANSFER',    'COMPLETED', now() - INTERVAL '13 days'),
+    -- Realistic filler
+    (2000547, 5000006, 'TXN-LERATO-VOD-547',  'VODACOM'            ,  549.00, 'ZAR', 'DEBICHECK',    'MOBILE_CONTRACT', 'COMPLETED', now() - INTERVAL '5 days'),
+    (2000548, 5000006, 'TXN-LERATO-INS-548',  'OUTSURANCE'         ,  710.00, 'ZAR', 'DEBICHECK',    'LOAN',            'COMPLETED', now() - INTERVAL '6 days'),
+    (2000549, 5000006, 'TXN-LERATO-MUN-549',  'ETHEKWINI MUNICIPAL', 1510.00, 'ZAR', 'STANDARD_EFT', 'MUNICIPAL',       'COMPLETED', now() - INTERVAL '9 days'),
+    (2000550, 5000006, 'TXN-LERATO-SHO-550',  'SHOPRITE'           ,  402.30, 'ZAR', 'STANDARD_EFT', 'IN_STORE_RETAIL', 'COMPLETED', now() - INTERVAL '2 days'),
+    (2000551, 5000006, 'TXN-LERATO-UE-551',   'UBER EATS'          ,  178.00, 'ZAR', 'STANDARD_EFT', 'FOOD_DELIVERY',   'COMPLETED', now() - INTERVAL '1 days'),
+    (2000552, 5000006, 'TXN-LERATO-ESK-552',  'ESKOM'              ,  830.00, 'ZAR', 'STANDARD_EFT', 'MUNICIPAL',       'COMPLETED', now() - INTERVAL '16 days'),
+    (2000553, 5000006, 'TXN-LERATO-SPO-553',  'SPOTIFY'            ,   69.99, 'ZAR', 'STANDARD_EFT', 'ONLINE_RETAIL',   'COMPLETED', now() - INTERVAL '24 days'),
+    (2000554, 5000006, 'TXN-LERATO-TAK-554',  'TAKEALOT'           , 1340.00, 'ZAR', 'STANDARD_EFT', 'ONLINE_RETAIL',   'COMPLETED', now() - INTERVAL '32 days'),
+    (2000555, 5000006, 'TXN-LERATO-VOD-555',  'VODACOM'            ,  549.00, 'ZAR', 'DEBICHECK',    'MOBILE_CONTRACT', 'COMPLETED', now() - INTERVAL '36 days');
+
 -- ---- Advance sequences past the seeded IDs ---------------------------------
 -- So that newly registered customers / provisioned accounts / future
 -- transactions / disputes do NOT collide with the explicit IDs above.
 SELECT setval('customer_seq',    1000100, true);
 SELECT setval('account_seq',     5000100, true);
-SELECT setval('transaction_seq', 2000200, true);
+SELECT setval('transaction_seq', 2000600, true);
 SELECT setval('dispute_seq',     3000100, true);

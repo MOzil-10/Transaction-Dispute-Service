@@ -88,10 +88,16 @@ password `Password123!`:
 | `trevor.sesoko@example.co.za` | Main account |
 | `mesut.ozil@example.co.za` | Main account |
 | `donald.duck@example.co.za` | Savings plan |
+| `thandeka.nkosi@capitec-review.co.za` | Main account |
+| `sipho.dlamini@capitec-review.co.za` | Main account |
+| `lerato.mahlangu@capitec-review.co.za` | Savings plan |
+
+The three `@capitec-review.co.za` accounts carry the same labelled scenario set and are meant for
+reviewers to test against.
 
 ### Demo walkthrough (every dispute scenario)
 
-The seed gives each of the three customers the same set of labelled transactions so a reviewer
+The seed gives each customer the same set of labelled transactions so a reviewer
 can exercise every path. Open **Transactions**, find the transaction by its reference (the first
 rows of each account are the labelled ones), and click **Dispute**. The reference tells you what
 to expect:
@@ -105,7 +111,7 @@ to expect:
 | `TXN-<NAME>-NODISPUTE-GAMB` | Gambling | **Not disputable** - ineligible category |
 | `TXN-<NAME>-NODISPUTE-POS` / `-P2P` | In-store purchase / money transfer | **Not disputable** - ineligible category |
 
-`<NAME>` is `TREVOR`, `MESUT` or `DONALD`. Other things to try:
+`<NAME>` is `TREVOR`, `MESUT`, `DONALD`, `THANDEKA`, `SIPHO` or `LERATO`. Other things to try:
 
 - **Duplicate guard:** dispute an `AUTO-PRE60` transaction, then try to dispute it again - the UI
   shows its status and blocks a second submission (the backend returns HTTP 400).
