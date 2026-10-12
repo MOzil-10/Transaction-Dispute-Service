@@ -88,11 +88,11 @@ password `Password123!`:
 | `trevor.sesoko@example.co.za` | Main account |
 | `mesut.ozil@example.co.za` | Main account |
 | `donald.duck@example.co.za` | Savings plan |
-| `thandeka.nkosi@capitec-review.co.za` | Main account |
-| `sipho.dlamini@capitec-review.co.za` | Main account |
-| `lerato.mahlangu@capitec-review.co.za` | Savings plan |
+| `thandeka.nkosi@disputex.co.za` | Main account |
+| `sipho.dlamini@disputex.co.za` | Main account |
+| `lerato.mahlangu@disputex.co.za` | Savings plan |
 
-The three `@capitec-review.co.za` accounts carry the same labelled scenario set and are meant for
+The three `@disputex.co.za` accounts carry the same labelled scenario set and are meant for
 reviewers to test against.
 
 ### Demo walkthrough (every dispute scenario)
